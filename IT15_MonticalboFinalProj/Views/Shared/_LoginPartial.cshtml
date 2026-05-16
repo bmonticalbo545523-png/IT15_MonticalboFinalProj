@@ -1,0 +1,39 @@
+@using Microsoft.AspNetCore.Identity
+@using IT15_MonticalboFinalProj.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav align-items-center gap-2">
+@if (SignInManager.IsSignedIn(User))
+{
+    <li class="nav-item">
+        <a class="nav-link fw-semibold px-3" asp-controller="Account" asp-action="RedirectToDashboard">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+        </a>
+    </li>
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-3" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="d-none d-md-inline">@User.Identity?.Name</span>
+            <i class="bi bi-person-circle fs-5"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg" aria-labelledby="userDropdown">
+            <li><a class="dropdown-item" asp-controller="Profile" asp-action="Setup"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form class="form-inline" asp-controller="Account" asp-action="Logout" method="post">
+                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+                </form>
+            </li>
+        </ul>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <a class="nav-link px-3" asp-controller="Account" asp-action="Login">Sign In</a>
+    </li>
+    <li class="nav-item">
+        <a class="btn btn-primary rounded-pill px-4" asp-controller="Account" asp-action="Register">Join as Student</a>
+    </li>
+}
+</ul>

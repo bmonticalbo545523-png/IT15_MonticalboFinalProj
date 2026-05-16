@@ -1,0 +1,78 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.ProjectViewModel>
+@{ Layout = "_ResearchAdviserLayout"; ViewData["Title"] = "My Research Groups"; }
+
+<div class="page-header">
+  <div class="breadcrumb">Research Adviser / My Groups</div>
+  <h2><i class="bi bi-mortarboard me-2 text-primary"></i>My Assigned Research Groups</h2>
+</div>
+
+<div class="row g-4">
+@foreach(var p in Model)
+{
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100 shadow-sm border-0" style="border-radius:12px; overflow:hidden">
+      <div class="card-header @(p.Status == "Completed" ? "bg-success" : "bg-primary") text-white py-3">
+        <h5 class="card-title mb-0">@p.ProjectName</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">@p.Description</p>
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Status:</span>
+            <span class="badge @(p.Status == "Proposal" ? "bg-info" : p.Status == "In Progress" ? "bg-primary" : "bg-success")">@p.Status</span>
+        </div>
+        <div class="d-flex justify-content-between mb-3">
+            <span class="text-muted small">Start Date:</span>
+            <span class="small fw-bold">@p.StartDate.ToString("MMM dd, yyyy")</span>
+        </div>
+        
+        <hr/>
+        
+        <div class="d-grid gap-2">
+            @if(!p.IsAcceptedByAdviser)
+            {
+                <button class="btn btn-warning btn-sm" onclick="acceptGroup(@p.Id)">
+                    <i class="bi bi-check2-circle me-1"></i>Accept Assignment
+                </button>
+            }
+            
+            <a href="/Tracking/ProjectDetails/@p.Id" class="btn btn-primary btn-sm mb-2">
+                <i class="bi bi-speedometer2 me-1"></i>Project Dashboard (PDLC & Chat)
+            </a>
+            
+            <a asp-action="ManageDeliverables" asp-route-projectId="@p.Id" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-list-check me-1"></i>Manage Deliverables
+            </a>
+            <a asp-action="ManageAnnouncements" asp-route-projectId="@p.Id" class="btn btn-outline-info btn-sm">
+                <i class="bi bi-megaphone me-1"></i>Announcements
+            </a>
+            <a asp-action="GroupSubmissions" asp-route-projectId="@p.Id" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-clipboard-data me-1"></i>View Submissions
+            </a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+@if(!Model.Any())
+{
+    <div class="col-12 text-center py-5">
+        <div class="text-muted">
+            <i class="bi bi-folder2-open fs-1 d-block mb-3"></i>
+            You have no assigned research groups yet.
+        </div>
+    </div>
+}
+</div>
+
+@section Scripts {
+<script>
+function acceptGroup(id){
+    if(!confirm("Accept this group assignment?")) return;
+    var fd = new FormData(); fd.append('id', id); 
+    fd.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+    fetch('/ResearchAdviser/AcceptGroup', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success) { location.reload(); } else { alert(res.message); }
+    });
+}
+</script>
+}

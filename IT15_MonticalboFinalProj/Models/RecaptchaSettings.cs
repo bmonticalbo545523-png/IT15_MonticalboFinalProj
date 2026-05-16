@@ -1,0 +1,8 @@
+namespace IT15_MonticalboFinalProj.Models;
+
+public class RecaptchaSettings
+{
+    public string SiteKey { get; set; } = string.Empty;
+    public string SecretKey { get; set; } = string.Empty;
+    public bool IsEnabled { get; set; } = true;
+}

@@ -1,0 +1,185 @@
+@model List<IT15_MonticalboFinalProj.Models.DefenseSchedule>
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Defense Scheduling"; }
+@{
+    var eligible = ViewBag.EligibleProjects as List<IT15_MonticalboFinalProj.Models.ViewModels.ProjectViewModel> ?? new();
+}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <div class="breadcrumb">Admin / Defense Scheduling</div>
+    <h2><i class="bi bi-calendar-check me-2 text-primary"></i>Defense Presentation Scheduling</h2>
+  </div>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleModal">
+    <i class="bi bi-plus-lg me-1"></i>Schedule Defense
+  </button>
+</div>
+
+<!-- Eligible Groups Card -->
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0"><i class="bi bi-check-circle me-2 text-success"></i>Eligible Groups for Defense <span class="badge bg-success ms-1">@eligible.Count</span></h5></div>
+  <div class="card-body">
+    @if(eligible.Any())
+    {
+      <div class="row g-3">
+      @foreach(var p in eligible)
+      {
+        <div class="col-md-4">
+          <div class="card border-success h-100">
+            <div class="card-body">
+              <h6 class="card-title text-success"><i class="bi bi-mortarboard me-1"></i>@p.ProjectName</h6>
+              <p class="small text-muted mb-1">Adviser: @(p.AdviserName ?? "Unassigned")</p>
+              <span class="badge bg-success">All Deliverables Approved</span>
+            </div>
+          </div>
+        </div>
+      }
+      </div>
+    }
+    else
+    {
+      <div class="text-center py-3 text-muted">
+        <i class="bi bi-hourglass-split fs-3 d-block mb-2"></i>
+        No groups have completed all deliverables yet.
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Scheduled Defenses -->
+<div class="card">
+  <div class="card-header"><h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Scheduled Defenses</h5></div>
+  <div class="card-body">
+    <table id="defensesTable" class="table w-100">
+      <thead><tr>
+        <th>Group</th><th>Date</th><th>Time</th><th>Location</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      @foreach(var d in Model)
+      {
+        <tr>
+          <td><strong>@d.Project?.ProjectName</strong><br/><small class="text-muted">Adviser: @(d.Project?.Adviser?.FullName ?? "-")</small></td>
+          <td>@d.ScheduledDate.ToString("MMM dd, yyyy")</td>
+          <td>@d.StartTime.ToString(@"hh\:mm") - @d.EndTime.ToString(@"hh\:mm")</td>
+          <td>@d.Location</td>
+          <td>
+            @if(d.Status=="Pending"){ <span class="badge bg-warning text-dark">Pending</span> }
+            else if(d.Status=="Approved by Adviser"){ <span class="badge bg-info">Adviser Approved</span> }
+            else if(d.Status=="Confirmed"){ <span class="badge bg-success">Confirmed</span> }
+            else if(d.Status=="Completed"){ <span class="badge bg-dark">Completed</span> }
+            else{ <span class="badge bg-danger">Cancelled</span> }
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              @if(d.Status == "Approved by Adviser")
+              {
+                <button class="btn btn-sm btn-success" onclick="confirmDefense(@d.Id)"><i class="bi bi-check-lg me-1"></i>Confirm</button>
+              }
+              @if(d.Status != "Cancelled" && d.Status != "Completed")
+              {
+                <button class="btn btn-sm btn-outline-danger" onclick="cancelDefense(@d.Id)"><i class="bi bi-x-lg"></i></button>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-calendar-plus me-2 text-primary"></i>Schedule Defense</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="scheduleForm">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Research Group</label>
+            <select name="projectId" id="projectSelect" class="form-select" required onchange="loadAvailability()">
+              <option value="">-- Select Eligible Group --</option>
+              @foreach(var p in eligible)
+              {
+                <option value="@p.Id" data-adviser="@p.AdviserId">@p.ProjectName (Adviser: @p.AdviserName)</option>
+              }
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Adviser Available Slot</label>
+            <select name="availabilityId" id="availabilitySelect" class="form-select" required>
+              <option value="">-- Select a group first --</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Location / Room</label>
+            <input name="location" class="form-control" placeholder="e.g., Room 301, Building A" required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Remarks (optional)</label>
+            <textarea name="remarks" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitSchedule()">Schedule Defense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#defensesTable').DataTable({ pageLength:10 });
+var token = document.querySelector('[name=__RequestVerificationToken]')?.value;
+
+function loadAvailability(){
+    var sel = document.getElementById('projectSelect');
+    var adviserId = sel.options[sel.selectedIndex]?.dataset?.adviser;
+    var avSel = document.getElementById('availabilitySelect');
+    avSel.innerHTML = '<option value="">Loading...</option>';
+    
+    if(!adviserId){ avSel.innerHTML = '<option value="">-- Select a group first --</option>'; return; }
+    
+    fetch('/Admin/GetAdviserAvailability?adviserId='+adviserId).then(r=>r.json()).then(slots=>{
+        avSel.innerHTML = '';
+        if(slots.length === 0){ avSel.innerHTML = '<option value="">No available slots set by adviser</option>'; return; }
+        slots.forEach(s => {
+            avSel.innerHTML += `<option value="${s.id}">${s.display}</option>`;
+        });
+    });
+}
+
+function submitSchedule(){
+    var f = document.getElementById('scheduleForm');
+    if(!f.checkValidity()){ f.reportValidity(); return; }
+    var fd = new FormData(f);
+    fetch('/Admin/ScheduleDefense', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+
+function confirmDefense(id){
+    if(!confirm('Confirm this defense schedule?')) return;
+    var fd = new FormData(); fd.append('id',id); fd.append('__RequestVerificationToken',token);
+    fetch('/Admin/ConfirmDefense', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+
+function cancelDefense(id){
+    if(!confirm('Cancel this defense schedule?')) return;
+    var fd = new FormData(); fd.append('id',id); fd.append('__RequestVerificationToken',token);
+    fetch('/Admin/CancelDefense', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+</script>
+}

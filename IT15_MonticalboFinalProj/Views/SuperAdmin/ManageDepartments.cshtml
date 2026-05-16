@@ -1,0 +1,156 @@
+@model List<IT15_MonticalboFinalProj.Models.Department>
+@{ Layout = "_SuperAdminLayout"; ViewData["Title"] = "Manage Departments"; }
+@{
+    var addUrl = Url.Action("AddDepartment", "SuperAdmin");
+    var editUrl = Url.Action("EditDepartment", "SuperAdmin");
+    var archiveUrl = Url.Action("InactivateDepartment", "SuperAdmin");
+}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <div class="breadcrumb"><a href="#">Dashboard</a> / Departments</div>
+    <h2><i class="bi bi-building me-2 text-primary"></i>Manage Departments</h2>
+  </div>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+    <i class="bi bi-plus-lg me-1"></i>Add Department
+  </button>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h6 class="fw-bold mb-3"><i class="bi bi-check-circle me-2 text-success"></i>Active Departments</h6>
+    <table id="deptsTable" class="table w-100">
+      <thead><tr>
+        <th>#</th><th>Name</th><th>Description</th><th>Status</th><th>Created</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      @{ int i=1; }
+      @foreach(var dept in Model)
+      {
+        <tr>
+          <td>@(i++)</td>
+          <td><strong>@dept.Name</strong></td>
+          <td><span class="text-muted">@dept.Description</span></td>
+          <td>
+            <span class="badge-status @(dept.IsActive?"badge-active":"badge-inactive")">
+              <i class="bi @(dept.IsActive?"bi-circle-fill":"bi-circle") " style="font-size:.5rem"></i>
+              @(dept.IsActive ? "Active" : "Inactive")
+            </span>
+          </td>
+          <td style="font-size:.8rem;color:var(--muted)">@dept.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</td>
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn-icon" style="background:rgba(79,70,229,.15);color:var(--primary)" title="Edit"
+                onclick="editDept('@dept.Id','@dept.Name','@dept.Description')"><i class="bi bi-pencil"></i></button>
+              <button class="btn-icon" style="background:rgba(245,158,11,.15);color:#f59e0b" title="Inactive"
+                  onclick="confirmArchive('@dept.Id','@dept.Name')"><i class="bi bi-building-dash"></i></button>
+            </div>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2 text-primary"></i>Add Department</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addForm">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Department Name</label>
+            <input name="Name" class="form-control" required placeholder="e.g. Computer Science"/></div>
+          <div class="mb-3"><label class="form-label">Description</label>
+            <textarea name="Description" class="form-control" rows="3" placeholder="Department description..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitAdd()"><i class="bi bi-check-lg me-1"></i>Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Department</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editForm">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <input type="hidden" name="Id" id="editId"/>
+          <div class="mb-3"><label class="form-label">Department Name</label>
+            <input name="Name" id="editName" class="form-control" required/></div>
+          <div class="mb-3"><label class="form-label">Description</label>
+            <textarea name="Description" id="editDescription" class="form-control" rows="3"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitEdit()"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="archiveModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title text-danger"><i class="bi bi-archive me-2"></i>Archive</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <p>Set <strong id="archiveName"></strong> as inactive? This will also inactivate all users in this department.</p>
+        <input type="hidden" id="archiveId"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+      <button class="btn btn-danger" onclick="submitArchive()"><i class="bi bi-archive me-1"></i>Confirm</button>
+    </div>
+  </div></div>
+</div>
+
+@section Scripts {
+<script>
+var _addUrl = '@addUrl', _editUrl = '@editUrl', _archiveUrl = '@archiveUrl', _deleteUrl = '@Url.Action("DeleteDepartment", "SuperAdmin")';
+var token = document.querySelector('[name=__RequestVerificationToken]')?.value;
+$('#deptsTable').DataTable({ pageLength:10, responsive:true });
+
+function submitAdd(){
+  var f=document.getElementById('addForm');
+  if(!f.checkValidity()){f.reportValidity();return;}
+  ajaxPost(_addUrl,'addForm',function(){bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();});
+}
+function editDept(id,name,desc){
+  document.getElementById('editId').value=id;
+  document.getElementById('editName').value=name;
+  document.getElementById('editDescription').value=desc;
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+function submitEdit(){
+  ajaxPost(_editUrl,'editForm',function(){bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();});
+}
+function confirmArchive(id,name){
+  document.getElementById('archiveId').value=id;document.getElementById('archiveName').textContent=name;
+  new bootstrap.Modal(document.getElementById('archiveModal')).show();
+}
+function submitArchive(){
+  var id=document.getElementById('archiveId').value;
+  var fd=new FormData();fd.append('id',id);fd.append('__RequestVerificationToken',token);
+  fetch(_archiveUrl,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(res){
+    if(res.success){showToast(res.message,'success');setTimeout(function(){location.reload();},1200);}
+    else showToast(res.message,'danger');
+    bootstrap.Modal.getInstance(document.getElementById('archiveModal')).hide();
+  });
+}
+</script>
+}

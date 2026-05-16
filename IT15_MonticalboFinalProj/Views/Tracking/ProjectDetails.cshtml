@@ -1,0 +1,472 @@
+@model IT15_MonticalboFinalProj.Models.Project
+@{
+    ViewData["Title"] = Model.ProjectName;
+    var milestones = ViewBag.Milestones as List<IT15_MonticalboFinalProj.Models.ProjectMilestone> ?? new();
+    var stageLogs = ViewBag.StageLogs as List<IT15_MonticalboFinalProj.Models.ProjectStageLog> ?? new();
+    Layout = User.IsInRole("SuperAdmin") ? "_SuperAdminLayout" : (User.IsInRole("Administrator") ? "_AdminLayout" : (User.IsInRole("ResearchAdviser") ? "_ResearchAdviserLayout" : "_StudentLayout"));
+}
+
+<div class="page-header d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="breadcrumb"><a href="#">Projects</a> / @Model.ProjectName</div>
+        <h2 class="fw-bold"><i class="bi bi-rocket-takeoff me-2 text-primary"></i>@Model.ProjectName</h2>
+        <p class="text-muted">@Model.Description</p>
+    </div>
+    <div class="text-end">
+        <div class="badge bg-primary px-3 py-2 mb-2">Stage: @Model.CurrentStage</div>
+        <div class="progress" style="height: 10px; width: 200px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: @Model.ProgressPercentage%" aria-valuenow="@Model.ProgressPercentage" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <small class="text-muted">@Model.ProgressPercentage% Completed</small>
+        <div class="mt-2 d-print-none">
+            <button class="btn btn-sm btn-print-custom" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>Export Summary PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@@media print {
+    .sidebar, .topbar, .chat-box, button, form, .d-print-none, .breadcrumb { display: none !important; }
+    .dash-main { margin-left: 0 !important; padding: 0 !important; width: 100% !important; }
+    .col-lg-8 { width: 100% !important; }
+    .col-lg-4 { display: none !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+    body { background-color: #fff !important; }
+}
+</style>
+
+<div class="row g-4">
+    <!-- Project Tracking & PDLC -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4 fw-bold"><i class="bi bi-kanban me-2 text-info"></i>Project Timeline & Milestones</h5>
+                <div class="timeline-container">
+                    @foreach (var m in milestones)
+                    {
+                        <div class="d-flex mb-3 align-items-start">
+                            <div class="me-3">
+                                <div class="milestone-dot @(m.IsCompleted ? "bg-success" : "bg-warning")"></div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold">@m.Title</h6>
+                                    <small class="text-muted">@m.TargetDate.ToString("MMM dd, yyyy")</small>
+                                </div>
+                                <p class="text-muted small mb-1">@m.Description</p>
+                                @if (!m.IsCompleted && (User.IsInRole("SuperAdmin") || User.IsInRole("Administrator") || User.IsInRole("ResearchAdviser")))
+                                {
+                                    <button class="btn btn-sm btn-outline-success py-0" onclick="toggleMilestone(@m.Id)">Mark Complete</button>
+                                }
+                                else if (m.IsCompleted)
+                                {
+                                    <span class="badge bg-success-soft text-success"><i class="bi bi-check2-circle me-1"></i>Completed</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (!milestones.Any())
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-calendar-event display-4 text-light"></i>
+                            <p class="text-muted mt-2">No milestones set for this project.</p>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#milestoneModal">Add Milestone</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4 fw-bold"><i class="bi bi-diagram-3 me-2 text-warning"></i>Development Lifecycle (PDLC)</h5>
+                <div class="pdlc-stepper d-flex justify-content-between">
+                    @{
+                        string[] stages = { "Requirement Gathering", "Design", "Development", "Testing", "Implementation" };
+                        int currentIdx = Array.IndexOf(stages, Model.CurrentStage);
+                    }
+                    @for (int i = 0; i < stages.Length; i++)
+                    {
+                        <div class="step-item @(i < currentIdx ? "completed" : (i == currentIdx ? "active" : ""))">
+                            <div class="step-circle">@(i + 1)</div>
+                            <div class="step-label">@stages[i]</div>
+                        </div>
+                    }
+                </div>
+                <hr class="my-4" />
+                <h6 class="fw-bold mb-3"><i class="bi bi-clock-history me-2"></i>Stage Audit History</h6>
+                @if (stageLogs.Any())
+                {
+                    <div class="timeline-container ms-2 ps-3 border-start border-primary border-2">
+                        @foreach (var log in stageLogs.OrderByDescending(l => l.StartedAt))
+                        {
+                            <div class="position-relative mb-3 ps-3">
+                                <div class="position-absolute bg-primary rounded-circle" style="width: 12px; height: 12px; left: -23px; top: 4px;"></div>
+                                <div class="fw-bold text-primary">@log.StageName <span class="badge bg-light text-dark fw-normal ms-2">@log.Status</span></div>
+                                <div class="small text-muted mb-1">
+                                    <i class="bi bi-calendar-event me-1"></i> @log.StartedAt.ToString("MMM dd, yyyy h:mm tt")
+                                </div>
+                                @if (!string.IsNullOrEmpty(log.Notes))
+                                {
+                                    <div class="bg-light p-2 rounded small border-start border-3 border-info">
+                                        <i class="bi bi-chat-quote text-muted me-1"></i> @log.Notes
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-0">No stage history recorded yet.</p>
+                }
+                
+                @if (User.IsInRole("SuperAdmin") || User.IsInRole("Administrator") || User.IsInRole("ResearchAdviser"))
+                {
+                    <div class="mt-4 text-center">
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#stageModal">Update Project Stage</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Collaboration & Documentation Sidebar -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3 fw-bold"><i class="bi bi-chat-dots me-2 text-primary"></i>Team Discussion</h5>
+                <div id="chatMessages" class="chat-box mb-3" style="height: 300px; overflow-y: auto;">
+                    <!-- Messages loaded via JS -->
+                </div>
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Type a message...">
+                    <button class="btn btn-primary" onclick="sendMessage()"><i class="bi bi-send"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0 fw-bold"><i class="bi bi-file-earmark-text me-2 text-success"></i>Documents</h5>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadModal"><i class="bi bi-plus"></i></button>
+                </div>
+                <div id="documentList">
+                    <!-- Documents loaded here -->
+                    <p class="text-muted text-center py-3">No documents uploaded.</p>
+                </div>
+                <a href="@Url.Action("ProjectDocuments", "Documentation", new { projectId = Model.Id })" class="btn btn-light w-100 mt-2">View All Docs</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-none d-print-block mt-5 pt-4 border-top">
+    <div class="row">
+        <div class="col-6">
+            <p class="text-muted small mb-1">Prepared By:</p>
+            <h6 class="fw-bold mb-0">@ViewBag.PreparedBy</h6>
+            <p class="text-muted small mb-0">Report Generator</p>
+            
+            <div class="mt-4 pt-2 border-top" style="width: 250px;">
+                <p class="small text-center">Signature over Printed Name</p>
+            </div>
+        </div>
+        <div class="col-6 text-end">
+            <p class="text-muted small mb-1">Date Generated:</p>
+            <h6 class="fw-bold mb-0">@DateTime.Now.ToString("MMMM dd, yyyy")</h6>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="milestoneModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Milestone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="milestoneForm">
+                <div class="modal-body">
+                    <input type="hidden" name="ProjectId" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="Title" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Date</label>
+                        <input type="date" name="TargetDate" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="Description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitMilestone()">Save Milestone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="stageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Project Stage</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="stageForm">
+                <div class="modal-body">
+                    <input type="hidden" name="ProjectId" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label">Select Stage</label>
+                        <select name="stageName" class="form-select">
+                            @foreach (var s in stages)
+                            {
+                                <option value="@s" selected="@(s == Model.CurrentStage)">@s</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Explain the transition..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitStage()">Update Stage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="projectId" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label">Document Title</label>
+                        <input type="text" name="title" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Abstract/Description</label>
+                        <textarea name="abstract" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">File</label>
+                        <input type="file" name="file" class="form-control" required />
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isFinal" id="isFinal">
+                        <label class="form-check-label" for="isFinal">Mark as Final Version</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitUpload()">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script>
+    const projectId = @Model.Id;
+
+    $(document).ready(function() {
+        loadMessages();
+        loadDocuments();
+        setInterval(loadMessages, 5000);
+        
+        const currentStage = '@Html.Raw(Model.CurrentStage)';
+        if (currentStage === "Implementation") {
+            setTimeout(() => {
+                var duration = 3 * 1000;
+                var animationEnd = Date.now() + duration;
+                var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+                function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+                var interval = setInterval(function() {
+                    var timeLeft = animationEnd - Date.now();
+                    if (timeLeft <= 0) return clearInterval(interval);
+                    var particleCount = 50 * (timeLeft / duration);
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                }, 250);
+            }, 500);
+        }
+    });
+
+    function loadDocuments() {
+        $.get('/Documentation/GetProjectDocuments?projectId=' + projectId, function(data) {
+            const list = $('#documentList');
+            list.empty();
+            if (!data || data.length === 0) {
+                list.append('<p class="text-muted text-center py-3">No documents uploaded.</p>');
+                return;
+            }
+            data.forEach(d => {
+                const finalBadge = d.isFinal ? '<span class="badge bg-success ms-2" style="font-size: 0.65rem;">Final</span>' : '';
+                list.append(`
+                    <div class="d-flex align-items-center mb-3 p-2 border rounded hover-bg-light">
+                        <div class="me-3">
+                            <i class="bi bi-file-earmark-pdf fs-3 text-danger"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 fw-bold"><a href="${d.filePath}" target="_blank" class="text-decoration-none text-dark">${d.title}</a> ${finalBadge}</h6>
+                            <small class="text-muted">By ${d.uploadedBy} • ${d.uploadedAt}</small>
+                        </div>
+                    </div>
+                `);
+            });
+        });
+    }
+
+    function loadMessages() {
+        $.get('/Collaboration/GetMessages?projectId=' + projectId, function(data) {
+            const box = $('#chatMessages');
+            box.empty();
+            data.forEach(m => {
+                const isMe = m.fullName === '@User.Identity?.Name';
+                const alignClass = isMe ? "justify-content-end" : "justify-content-start";
+                const bubbleColor = isMe ? "bg-primary text-white" : "bg-light text-dark";
+                const nameDisplay = isMe ? "You" : m.fullName;
+                
+                box.append(`
+                    <div class="d-flex ${alignClass} mb-3 px-2">
+                        <div style="max-width: 80%;">
+                            <div class="mb-1" style="font-size: 0.75rem; color: #6c757d; text-align: ${isMe ? 'right' : 'left'};">
+                                <strong>${nameDisplay}</strong>
+                            </div>
+                            <div class="${bubbleColor} py-2 px-3 shadow-sm" style="font-size: 0.9rem; border-radius: ${isMe ? '15px 15px 0 15px' : '15px 15px 15px 0'};">
+                                ${m.content}
+                            </div>
+                            <div class="mt-1" style="font-size: 0.65rem; color: #adb5bd; text-align: ${isMe ? 'right' : 'left'};">
+                                ${m.timestamp}
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+            box.scrollTop(box[0].scrollHeight);
+        });
+    }
+
+    function sendMessage() {
+        const input = $('#chatInput');
+        const content = input.val();
+        if (!content) return;
+        $.post('/Collaboration/SendMessage', { projectId: projectId, content: content }, function(res) {
+            if (res.success) {
+                input.val('');
+                loadMessages();
+            }
+        });
+    }
+
+    function submitMilestone() {
+        const fd = new FormData(document.getElementById('milestoneForm'));
+        $.ajax({
+            url: '/Tracking/AddMilestone',
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.success) location.reload();
+            }
+        });
+    }
+
+    function toggleMilestone(id) {
+        $.post('/Tracking/ToggleMilestone', { id: id }, function(res) {
+            if (res.success) location.reload();
+        });
+    }
+
+    function submitStage() {
+        const fd = new FormData(document.getElementById('stageForm'));
+        $.ajax({
+            url: '/Tracking/UpdateStage',
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.success) location.reload();
+            }
+        });
+    }
+
+    function submitUpload() {
+        const form = document.getElementById('uploadForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        // Ensure the checkbox sends true/false explicitly if needed, but FormData handles "on" correctly for simple boolean checks if we just ensure we check it.
+        const fd = new FormData(form);
+        // Explicitly set isFinal to boolean since checkbox only sends if checked
+        fd.set('isFinal', form.querySelector('#isFinal').checked);
+        
+        $.ajax({
+            url: '/Documentation/Upload',
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    $('#uploadModal').modal('hide');
+                    loadDocuments();
+                    form.reset();
+                } else {
+                    alert(res.message || "Failed to upload document.");
+                }
+            },
+            error: function() {
+                alert("An error occurred while uploading. Ensure the file isn't too large.");
+            }
+        });
+    }
+</script>
+
+<style>
+    .milestone-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; }
+    .bg-success-soft { background: rgba(25,135,84,0.1); }
+    .pdlc-stepper { position: relative; padding: 20px 0; display: flex; justify-content: space-between; }
+    .step-item { text-align: center; position: relative; flex: 1; z-index: 1; }
+    .step-circle { width: 35px; height: 35px; border-radius: 50%; background: #e9ecef; color: #6c757d; line-height: 35px; margin: 0 auto 10px; font-weight: bold; border: 3px solid #fff; transition: all 0.3s; }
+    .step-label { font-size: 0.75rem; color: #6c757d; font-weight: 500; }
+    .step-item.active .step-circle { background: var(--bs-primary); color: #fff; box-shadow: 0 0 0 4px rgba(13,110,253,0.2); }
+    .step-item.active .step-label { color: var(--bs-primary); font-weight: bold; }
+    .step-item.completed .step-circle { background: #198754; color: #fff; }
+    .pdlc-stepper::before { content: ""; position: absolute; top: 37px; left: 10%; right: 10%; height: 2px; background: #e9ecef; z-index: 0; }
+    .chat-box::-webkit-scrollbar { width: 5px; }
+    .chat-box::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 5px; }
+
+    @@media (max-width: 768px) {
+        .pdlc-stepper { flex-direction: column; gap: 20px; padding-left: 20px; }
+        .pdlc-stepper::before { left: 37px; top: 20px; bottom: 20px; width: 2px; height: auto; right: auto; }
+        .step-item { text-align: left; display: flex; align-items: center; gap: 15px; }
+        .step-circle { margin: 0; flex-shrink: 0; }
+        .step-label { font-size: 0.85rem; }
+    }
+</style>
+}

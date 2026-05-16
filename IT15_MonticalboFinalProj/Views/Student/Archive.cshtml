@@ -1,0 +1,41 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.ProjectTaskViewModel>
+@{ Layout = "_StudentLayout"; ViewData["Title"] = "Archive"; }
+
+<div class="page-header">
+  <div class="breadcrumb">Student / Archive</div>
+  <h2><i class="bi bi-archive-fill me-2 text-warning"></i>Archived Deliverables</h2>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <table id="archivedTable" class="table w-100">
+      <thead><tr>
+        <th>Research Group</th><th>Deliverable</th><th>Type</th><th>Status</th><th>Due Date</th>
+      </tr></thead>
+      <tbody>
+      @foreach(var t in Model)
+      {
+        <tr>
+          <td><span class="badge bg-secondary">@t.ProjectName</span></td>
+          <td><strong>@t.Title</strong></td>
+          <td><span class="badge bg-light text-dark border">@t.Type</span></td>
+          <td><span class="badge bg-secondary">@t.Status</span></td>
+          <td style="font-size:.85rem">@(t.DueDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    @if(!Model.Any())
+    {
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-archive fs-1 d-block mb-2"></i>No archived deliverables found.
+      </div>
+    }
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#archivedTable').DataTable({ pageLength:10 });
+</script>
+}

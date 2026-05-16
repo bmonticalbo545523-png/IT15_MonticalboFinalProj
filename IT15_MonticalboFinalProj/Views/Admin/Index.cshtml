@@ -1,0 +1,107 @@
+@model IT15_MonticalboFinalProj.Models.ViewModels.DashboardStatsViewModel
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Dashboard"; }
+
+<div class="page-header">
+  <div class="breadcrumb"><a href="#">ResearchHub</a> / Dashboard</div>
+  <h2><i class="bi bi-speedometer2 me-2 text-primary"></i>Administrator Dashboard</h2>
+  <p>Welcome back, <strong>@User.Identity?.Name</strong></p>
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card" style="--card-color:#4F46E5">
+    <div class="card-icon"><i class="bi bi-people-fill"></i></div>
+    <div class="card-value" data-counter="@Model.TotalUsers">0</div>
+    <div class="card-label">Total Users</div>
+    <div class="card-trend trend-up"><i class="bi bi-arrow-up-right"></i> All accounts</div>
+  </div>
+  <div class="stat-card" style="--card-color:#10B981">
+    <div class="card-icon"><i class="bi bi-journal-richtext"></i></div>
+    <div class="card-value" data-counter="@Model.ActiveProjects">0</div>
+    <div class="card-label">Active Research</div>
+    <div class="card-trend trend-up"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> In progress</div>
+  </div>
+  <div class="stat-card" style="--card-color:#F59E0B">
+    <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
+    <div class="card-value" data-counter="@Model.PendingProjects">0</div>
+    <div class="card-label">Pending Groups</div>
+    <div class="card-trend trend-down"><i class="bi bi-clock"></i> Awaiting start</div>
+  </div>
+  <div class="stat-card" style="--card-color:#06B6D4">
+    <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="card-value" data-counter="@Model.CompletedProjects">0</div>
+    <div class="card-label">Completed Research</div>
+    <div class="card-trend trend-up"><i class="bi bi-trophy"></i> Done</div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Research Overview</h5></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="overviewChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5><i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity</h5>
+        <a asp-controller="Admin" asp-action="ManageProjects" class="btn btn-outline-primary btn-sm">View Research Groups</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0" style="color:var(--text)">
+            <thead><tr style="background:var(--bg2)">
+              <th class="px-3 py-3" style="font-size:.75rem;color:var(--text2)">TIME</th>
+              <th class="py-3" style="font-size:.75rem;color:var(--text2)">ACTION</th>
+            </tr></thead>
+            <tbody>
+            @foreach(var log in Model.RecentLogs)
+            {
+              <tr>
+                <td class="px-3 py-2" style="font-size:.75rem;color:var(--muted);white-space:nowrap">
+                  @log.Timestamp.ToLocalTime().ToString("MM/dd HH:mm")
+                </td>
+                <td class="py-2" style="font-size:.85rem">@log.Action</td>
+              </tr>
+            }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-lightning-fill me-2 text-primary"></i>Quick Actions</h5>
+      </div>
+      <div class="card-body d-flex flex-wrap gap-3">
+        <a asp-controller="SuperAdmin" asp-action="ManageUsers" class="btn btn-outline-primary"><i class="bi bi-person-plus me-2"></i>Manage Users</a>
+        <a asp-controller="Admin" asp-action="ManageProjects" class="btn btn-outline-primary"><i class="bi bi-plus-circle me-2"></i>Add Research Group</a>
+        <a asp-controller="Admin" asp-action="Analytics" class="btn btn-outline-primary"><i class="bi bi-bar-chart me-2"></i>View Analytics</a>
+        <a asp-controller="Admin" asp-action="GenerateReport" class="btn btn-outline-primary"><i class="bi bi-file-earmark-text me-2"></i>Generate Report</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+new Chart(document.getElementById('overviewChart'),{
+  type:'doughnut',
+  data:{
+    labels:['Active','Pending','Completed'],
+    datasets:[{
+      data:[@Model.ActiveProjects,@Model.PendingProjects,@Model.CompletedProjects],
+      backgroundColor:['#10B981','#F59E0B','#4F46E5'],
+      borderWidth:0,hoverOffset:8
+    }]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{color:getComputedStyle(document.documentElement).getPropertyValue('--text'),padding:14,font:{size:11}}}}}
+});
+</script>
+}

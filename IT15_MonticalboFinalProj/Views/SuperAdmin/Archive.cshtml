@@ -1,0 +1,152 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.AdminUserViewModel>
+@{ Layout = "_SuperAdminLayout"; ViewData["Title"] = "Archive"; }
+@{
+    var archivedDepts = ViewBag.ArchivedDepartments as List<IT15_MonticalboFinalProj.Models.Department> ?? new();
+    var restoreUserUrl = Url.Action("RestoreUser", "SuperAdmin");
+    var restoreDeptUrl = Url.Action("RestoreDepartment", "SuperAdmin");
+}
+
+<div class="page-header">
+  <div class="breadcrumb"><a href="#">Dashboard</a> / Archive</div>
+  <h2><i class="bi bi-archive-fill me-2 text-warning"></i>Archive Repository</h2>
+</div>
+
+<ul class="nav nav-tabs mb-4" id="archiveTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" role="tab">
+      <i class="bi bi-people me-2"></i>Archived Users
+      <span class="badge bg-secondary ms-1">@Model.Count</span>
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="depts-tab" data-bs-toggle="tab" data-bs-target="#depts-pane" type="button" role="tab">
+      <i class="bi bi-building me-2"></i>Archived Departments
+      <span class="badge bg-secondary ms-1">@archivedDepts.Count</span>
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="archiveTabsContent">
+  <!-- Users Tab -->
+  <div class="tab-pane fade show active" id="users-pane" role="tabpanel">
+    <div class="card">
+      <div class="card-body">
+        <table id="archivedUsersTable" class="table w-100">
+          <thead><tr>
+            <th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Archived On</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+          @foreach(var user in Model)
+          {
+            <tr>
+              <td><strong>@user.FullName</strong></td>
+              <td>@user.Email</td>
+              <td>
+                @if(user.Role == "SuperAdmin"){ <span class="badge bg-danger">SuperAdmin</span> }
+                else if(user.Role == "Administrator"){ <span class="badge bg-primary">Admin</span> }
+                else { <span class="badge bg-secondary">User</span> }
+              </td>
+              <td>@user.DepartmentName</td>
+              <td style="font-size:.8rem;color:var(--muted)">@(user.ArchivedAt?.ToLocalTime().ToString("MMM dd, yyyy") ?? "-")</td>
+              <td>
+                <button class="btn-icon" style="background:rgba(16,185,129,.15);color:#059669" title="Restore"
+                  onclick="confirmRestoreUser('@user.Id','@user.FullName')">
+                  <i class="bi bi-arrow-counterclockwise"></i></button>
+              </td>
+            </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Departments Tab -->
+  <div class="tab-pane fade" id="depts-pane" role="tabpanel">
+    <div class="card">
+      <div class="card-body">
+        <table id="archivedDeptsTable" class="table w-100">
+          <thead><tr>
+            <th>Name</th><th>Description</th><th>Created</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+          @foreach(var dept in archivedDepts)
+          {
+            <tr>
+              <td><strong>@dept.Name</strong></td>
+              <td><span class="text-muted">@dept.Description</span></td>
+              <td style="font-size:.8rem;color:var(--muted)">@dept.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</td>
+              <td>
+                <button class="btn-icon" style="background:rgba(16,185,129,.15);color:#059669" title="Restore"
+                  onclick="confirmRestoreDept('@dept.Id','@dept.Name')">
+                  <i class="bi bi-arrow-counterclockwise"></i></button>
+              </td>
+            </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="restoreUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title text-success"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore User</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><p>Restore user <strong id="restoreUserName"></strong>?</p><input type="hidden" id="restoreUserId"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+      <button class="btn btn-success" onclick="submitRestoreUser()"><i class="bi bi-arrow-counterclockwise me-1"></i>Restore</button>
+    </div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="restoreDeptModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title text-success"><i class="bi bi-arrow-counterclockwise me-2"></i>Restore Dept</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><p>Restore department <strong id="restoreDeptName"></strong>?</p><input type="hidden" id="restoreDeptId"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+      <button class="btn btn-success" onclick="submitRestoreDept()"><i class="bi bi-arrow-counterclockwise me-1"></i>Restore</button>
+    </div>
+  </div></div>
+</div>
+
+@section Scripts {
+<script>
+var _restoreUserUrl='@restoreUserUrl', _restoreDeptUrl='@restoreDeptUrl';
+var token = document.querySelector('[name=__RequestVerificationToken]')?.value;
+
+$('#archivedUsersTable').DataTable({ pageLength:10, responsive:true });
+$('#archivedDeptsTable').DataTable({ pageLength:10, responsive:true });
+
+function confirmRestoreUser(id,name){
+  document.getElementById('restoreUserId').value=id;document.getElementById('restoreUserName').textContent=name;
+  new bootstrap.Modal(document.getElementById('restoreUserModal')).show();
+}
+function submitRestoreUser(){
+  var id=document.getElementById('restoreUserId').value;
+  var fd=new FormData();fd.append('id',id);if(token)fd.append('__RequestVerificationToken',token);
+  fetch(_restoreUserUrl,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(res){
+    if(res.success){showToast(res.message,'success');setTimeout(function(){location.reload();},1200);}
+    else showToast(res.message,'danger');
+    bootstrap.Modal.getInstance(document.getElementById('restoreUserModal')).hide();
+  });
+}
+function confirmRestoreDept(id,name){
+  document.getElementById('restoreDeptId').value=id;document.getElementById('restoreDeptName').textContent=name;
+  new bootstrap.Modal(document.getElementById('restoreDeptModal')).show();
+}
+function submitRestoreDept(){
+  var id=document.getElementById('restoreDeptId').value;
+  var fd=new FormData();fd.append('id',id);if(token)fd.append('__RequestVerificationToken',token);
+  fetch(_restoreDeptUrl,{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(res){
+    if(res.success){showToast(res.message,'success');setTimeout(function(){location.reload();},1200);}
+    else showToast(res.message,'danger');
+    bootstrap.Modal.getInstance(document.getElementById('restoreDeptModal')).hide();
+  });
+}
+</script>
+}

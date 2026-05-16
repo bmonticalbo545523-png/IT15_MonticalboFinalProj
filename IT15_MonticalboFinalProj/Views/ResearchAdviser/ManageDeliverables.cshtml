@@ -1,0 +1,373 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.ProjectTaskViewModel>
+@{ Layout = "_ResearchAdviserLayout"; ViewData["Title"] = "Manage Deliverables"; }
+@{
+    var project = ViewBag.Project as IT15_MonticalboFinalProj.Models.Project;
+    var members = ViewBag.Members as List<IT15_MonticalboFinalProj.Models.ProjectMember> ?? new();
+    var archived = ViewBag.ArchivedDeliverables as List<IT15_MonticalboFinalProj.Models.ProjectTask> ?? new();
+}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <div class="breadcrumb">
+      <a asp-action="MyResearchGroups">My Groups</a> / @(project?.ProjectName) / Deliverables
+    </div>
+    <h2><i class="bi bi-list-task me-2 text-primary"></i>Deliverables: @(project?.ProjectName)</h2>
+  </div>
+  <div class="d-flex gap-2">
+    <a asp-action="GroupSubmissions" asp-route-projectId="@project?.Id" class="btn btn-outline-primary">
+      <i class="bi bi-clipboard-data me-1"></i>Submission Tracker
+    </a>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+      <i class="bi bi-plus-lg me-1"></i>Add Deliverable
+    </button>
+  </div>
+</div>
+
+<!-- Progress Tracker -->
+@if(Model.Any())
+{
+<div class="card mb-4">
+  <div class="card-body">
+    <h6 class="mb-3"><i class="bi bi-bar-chart-steps me-2 text-primary"></i>Deliverable Progress</h6>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      @foreach(var t in Model.OrderBy(t => t.OrderIndex))
+      {
+        var stepColor = t.Status == "Approved" ? "bg-success" : t.Status == "Submitted" || t.Status == "Under Review" ? "bg-primary" : t.Status == "Needs Revision" ? "bg-warning" : "bg-secondary";
+        <div class="d-flex flex-column align-items-center" style="min-width:80px">
+          <div class="rounded-circle d-flex align-items-center justify-content-center text-white @stepColor" style="width:36px;height:36px;font-size:.8rem">
+            @if(t.Status == "Approved"){ <i class="bi bi-check-lg"></i> }
+            else { @(t.OrderIndex + 1) }
+          </div>
+          <small class="text-muted mt-1 text-center" style="font-size:.7rem;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">@t.Title</small>
+        </div>
+        @if(t != Model.OrderBy(x => x.OrderIndex).Last())
+        {
+          <div style="flex:1;height:2px;background:var(--border);min-width:20px;align-self:flex-start;margin-top:18px"></div>
+        }
+      }
+    </div>
+  </div>
+</div>
+}
+
+<div class="card mb-4">
+  <div class="card-body">
+    <table id="deliverablesTable" class="table w-100">
+      <thead><tr>
+        <th>#</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Due Date</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      @foreach(var t in Model.OrderBy(x => x.OrderIndex))
+      {
+        <tr>
+          <td><span class="badge bg-dark">@(t.OrderIndex + 1)</span></td>
+          <td>
+            <strong>@t.Title</strong>
+            @if(!string.IsNullOrEmpty(t.AttachmentFileName))
+            {
+              <br/><a href="@t.AttachmentPath" target="_blank" class="text-primary small"><i class="bi bi-paperclip"></i> @t.AttachmentFileName</a>
+            }
+          </td>
+          <td><span class="badge bg-light text-dark border">@t.Type</span></td>
+          <td>
+            @if(t.Priority=="High"){ <span class="badge bg-danger">High</span> }
+            else if(t.Priority=="Medium"){ <span class="badge bg-warning text-dark">Medium</span> }
+            else{ <span class="badge bg-info text-dark">Low</span> }
+          </td>
+          <td>
+            @if(t.Status=="Pending"){ <span class="badge bg-secondary">Pending</span> }
+            else if(t.Status=="Submitted"){ <span class="badge bg-info">Submitted</span> }
+            else if(t.Status=="Under Review"){ <span class="badge bg-primary">Under Review</span> }
+            else if(t.Status=="Needs Revision"){ <span class="badge bg-warning text-dark">Needs Revision</span> }
+            else if(t.Status=="Approved"){ <span class="badge bg-success">Approved</span> }
+            else{ <span class="badge bg-danger">Overdue</span> }
+          </td>
+          <td style="font-size:.85rem">@(t.DueDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-primary" onclick="reviewDeliverable(@t.Id, '@Html.Raw(t.Title.Replace("'","\\\\'"))', '@t.Status')">
+                <i class="bi bi-search me-1"></i>Review
+              </button>
+              <button class="btn-icon" style="background:rgba(79,70,229,.15);color:var(--primary)" title="Edit"
+                onclick="editDeliverable(@t.Id)"><i class="bi bi-pencil"></i></button>
+              <button class="btn-icon" style="background:rgba(239,68,68,.15);color:#ef4444" title="Archive"
+                onclick="archiveDeliverable(@t.Id)"><i class="bi bi-archive"></i></button>
+            </div>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2 text-primary"></i>Add Deliverable</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addForm" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ProjectId" value="@project?.Id"/>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-8"><label class="form-label">Title</label><input name="Title" class="form-control" required/></div>
+            <div class="col-4"><label class="form-label">Order #</label><input name="OrderIndex" type="number" class="form-control" value="0" min="0" required/></div>
+          </div>
+          <div class="mb-3"><label class="form-label">Description / Instructions</label><textarea name="Description" class="form-control" rows="3"></textarea></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label">Type</label>
+              <select name="Type" class="form-select">
+                <option value="Document">Document</option><option value="Presentation">Presentation</option><option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-6"><label class="form-label">Priority</label>
+              <select name="Priority" class="form-select">
+                <option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label">Due Date</label><input name="DueDate" type="date" class="form-control due-date-input" required/></div>
+            <div class="col-6"><label class="form-label">Assign To</label>
+              <select name="AssignedToId" class="form-select">
+                <option value="">-- All Group Members --</option>
+                @foreach(var m in members){ <option value="@m.StudentId">@m.Student?.FullName</option> }
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><i class="bi bi-paperclip me-1"></i>Attach Sample File <small class="text-muted">(PDF, DOC, DOCX only)</small></label>
+            <input name="attachment" type="file" class="form-control" accept=".pdf,.doc,.docx"/>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitAdd()">Create</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Deliverable</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editForm" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" id="editId"/>
+        <input type="hidden" name="ProjectId" value="@project?.Id"/>
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-8"><label class="form-label">Title</label><input name="Title" id="editTitle" class="form-control" required/></div>
+            <div class="col-4"><label class="form-label">Order #</label><input name="OrderIndex" id="editOrderIndex" type="number" class="form-control" min="0" required/></div>
+          </div>
+          <div class="mb-3"><label class="form-label">Description</label><textarea name="Description" id="editDescription" class="form-control" rows="3"></textarea></div>
+          <div class="row mb-3">
+            <div class="col-4"><label class="form-label">Type</label>
+              <select name="Type" id="editType" class="form-select">
+                <option value="Document">Document</option><option value="Presentation">Presentation</option><option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-4"><label class="form-label">Priority</label>
+              <select name="Priority" id="editPriority" class="form-select">
+                <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option>
+              </select>
+            </div>
+            <div class="col-4"><label class="form-label">Status</label>
+              <select name="Status" id="editStatus" class="form-select">
+                <option value="Pending">Pending</option><option value="Submitted">Submitted</option>
+                <option value="Under Review">Under Review</option><option value="Needs Revision">Needs Revision</option>
+                <option value="Approved">Approved</option><option value="Overdue">Overdue</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label">Due Date</label><input name="DueDate" id="editDueDate" type="date" class="form-control due-date-input" required/></div>
+            <div class="col-6"><label class="form-label">Assign To</label>
+              <select name="AssignedToId" id="editAssignedTo" class="form-select">
+                <option value="">-- All Group Members --</option>
+                @foreach(var m in members){ <option value="@m.StudentId">@m.Student?.FullName</option> }
+              </select>
+            </div>
+          </div>
+          <div class="mb-3" id="currentAttachmentWrapper" style="display:none">
+            <label class="form-label">Current Attachment</label>
+            <div><a id="currentAttachment" href="#" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-paperclip me-1"></i><span id="currentAttachmentName"></span></a></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label"><i class="bi bi-paperclip me-1"></i>Replace Attachment <small class="text-muted">(PDF, DOC, DOCX)</small></label>
+            <input name="attachment" type="file" class="form-control" accept=".pdf,.doc,.docx"/>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitEdit()">Save Changes</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-search me-2 text-primary"></i>Review: <span id="reviewTitle"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+            <div class="col-md-6 border-end">
+                <h6>Submissions</h6>
+                <div id="submissionList" class="mb-3">
+                    <!-- Submissions loaded here -->
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h6>Feedback & Status</h6>
+                <div id="commentList" class="mb-3" style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:5px">
+                    <!-- Comments loaded here -->
+                </div>
+                <form id="feedbackForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="taskId" id="feedbackTaskId"/>
+                    <div class="mb-2">
+                        <label class="form-label small">Add Comment / Instruction</label>
+                        <textarea name="content" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Update Status</label>
+                        <select name="newStatus" id="reviewStatusSelect" class="form-select form-select-sm">
+                            <option value="">-- Keep Current --</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Needs Revision">Needs Revision</option>
+                            <option value="Approved">Approved</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm w-100" onclick="submitFeedback()">Post Feedback</button>
+                </form>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#deliverablesTable').DataTable({ pageLength:10, order:[[0,'asc']] });
+var currentTaskId = 0;
+var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+// Set min date on all due-date inputs to today
+document.querySelectorAll('.due-date-input').forEach(function(el){
+    el.min = new Date().toISOString().split('T')[0];
+});
+
+function submitAdd(){
+  var f=document.getElementById('addForm');if(!f.checkValidity()){f.reportValidity();return;}
+  var fd = new FormData(f);
+  fetch('/ResearchAdviser/AddDeliverable', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+    if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+    else { showToast(res.message,'danger'); }
+  }).catch(()=>showToast('Network error.','danger'));
+}
+
+function editDeliverable(id){
+    fetch('/ResearchAdviser/GetDeliverableDetails?id='+id).then(r=>r.json()).then(data=>{
+        document.getElementById('editId').value = data.id;
+        document.getElementById('editTitle').value = data.title;
+        document.getElementById('editDescription').value = data.description || '';
+        document.getElementById('editPriority').value = data.priority;
+        document.getElementById('editStatus').value = data.status;
+        document.getElementById('editDueDate').value = data.dueDate || '';
+        document.getElementById('editAssignedTo').value = data.assignedToId || '';
+        document.getElementById('editType').value = data.type || 'Document';
+        document.getElementById('editOrderIndex').value = data.orderIndex || 0;
+        
+        if(data.attachmentPath && data.attachmentFileName){
+            document.getElementById('currentAttachmentWrapper').style.display='block';
+            document.getElementById('currentAttachment').href = data.attachmentPath;
+            document.getElementById('currentAttachmentName').textContent = data.attachmentFileName;
+        } else {
+            document.getElementById('currentAttachmentWrapper').style.display='none';
+        }
+        
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    });
+}
+
+function submitEdit(){
+    var f=document.getElementById('editForm');if(!f.checkValidity()){f.reportValidity();return;}
+    var fd = new FormData(f);
+    fetch('/ResearchAdviser/EditDeliverable', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else { showToast(res.message,'danger'); }
+    }).catch(()=>showToast('Network error.','danger'));
+}
+
+function archiveDeliverable(id){
+    if(!confirm('Archive this deliverable?')) return;
+    var fd = new FormData(); fd.append('id', id); fd.append('__RequestVerificationToken', token);
+    fetch('/ResearchAdviser/ArchiveDeliverable', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else { showToast(res.message,'danger'); }
+    });
+}
+
+
+function reviewDeliverable(id, title, status){
+    currentTaskId = id;
+    document.getElementById('reviewTitle').textContent = title;
+    document.getElementById('feedbackTaskId').value = id;
+    document.getElementById('reviewStatusSelect').value = status;
+    loadSubmissions();
+    new bootstrap.Modal(document.getElementById('reviewModal')).show();
+}
+
+function loadSubmissions(){
+    fetch('/ResearchAdviser/GetSubmissionDetails?taskId='+currentTaskId).then(r=>r.json()).then(data=>{
+        var sList = document.getElementById('submissionList');
+        sList.innerHTML = "";
+        if(data.submissions.length === 0) sList.innerHTML = "<p class='text-muted small'>No submissions yet.</p>";
+        data.submissions.forEach(s => {
+            sList.innerHTML += `<div class='card mb-2 p-2 small border-0 bg-light'>
+                <div class='fw-bold'>${s.fullName}</div>
+                <div class='text-muted'>${s.submittedAt}</div>
+                <p class='mb-1'>${s.submissionNote || ""}</p>
+                ${s.filePath ? `<a href='${s.filePath}' target='_blank' class='btn btn-xs btn-outline-primary mt-1'><i class="bi bi-download me-1"></i>${s.originalFileName || 'Download File'}</a>` : ""}
+            </div>`;
+        });
+
+        var cList = document.getElementById('commentList');
+        cList.innerHTML = "";
+        if(data.comments.length === 0) cList.innerHTML = "<p class='text-muted small'>No comments yet.</p>";
+        data.comments.forEach(c => {
+            cList.innerHTML += `<div class='mb-2 pb-2 border-bottom'>
+                <div class='fw-bold' style='font-size:11px'>${c.fullName} <span class='text-muted fw-normal'>- ${c.createdAt}</span></div>
+                <div style='font-size:12px'>${c.content}</div>
+            </div>`;
+        });
+    });
+}
+
+function submitFeedback(){
+    var f = document.getElementById('feedbackForm');
+    if(!f.checkValidity()){ f.reportValidity(); return; }
+    
+    ajaxPost('/ResearchAdviser/AddFeedback', 'feedbackForm', function(res){
+        if(res.success){
+            loadSubmissions();
+            document.querySelector('#feedbackForm textarea').value = "";
+        }
+    });
+}
+</script>
+}

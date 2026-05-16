@@ -1,0 +1,60 @@
+@{ Layout = "_ResearchAdviserLayout"; ViewData["Title"] = "Archive"; }
+
+<div class="page-header">
+  <div class="breadcrumb">Research Adviser / Archive</div>
+  <h2><i class="bi bi-archive-fill me-2 text-warning"></i>Archive Repository</h2>
+</div>
+
+
+<div class="card">
+  @{ var archivedDeliverables = ViewBag.ArchivedDeliverables as List<IT15_MonticalboFinalProj.Models.ProjectTask> ?? new(); }
+  <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Archived Deliverables <span class="badge bg-secondary ms-1">@archivedDeliverables.Count</span></h5></div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table id="archivedDeliverablesTable" class="table w-100">
+        <thead><tr>
+          <th>Title</th><th>Project</th><th>Priority</th><th>Archived On</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+        @foreach(var d in archivedDeliverables)
+        {
+          <tr>
+            <td><strong>@d.Title</strong></td>
+            <td>@d.Project?.ProjectName</td>
+            <td>@d.Priority</td>
+            <td style="font-size:.8rem;color:var(--muted)">@(d.ArchivedAt?.ToLocalTime().ToString("MMM dd, yyyy") ?? "-")</td>
+            <td>
+              <button class="btn btn-sm btn-success" onclick="restoreDeliverable(@d.Id)">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+              </button>
+            </td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+    @if(!archivedDeliverables.Any())
+    {
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-file-earmark-x fs-1 d-block mb-2"></i>No archived deliverables found.
+      </div>
+    }
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#archivedDeliverablesTable').DataTable({ pageLength:10 });
+var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+
+function restoreDeliverable(id){
+    if(!confirm('Restore this deliverable?')) return;
+    var fd = new FormData(); fd.append('id', id); if(token) fd.append('__RequestVerificationToken', token);
+    fetch('/ResearchAdviser/RestoreDeliverable', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+</script>
+}

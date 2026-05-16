@@ -1,0 +1,9 @@
+@{ Layout = "_AuthLayout"; ViewData["Title"] = "Access Denied"; }
+<div class="text-center py-3">
+  <div style="font-size:3rem;color:var(--danger);margin-bottom:1rem"><i class="bi bi-shield-x"></i></div>
+  <h2 style="color:#fff;font-weight:700">Access Denied</h2>
+  <p style="color:rgba(255,255,255,.55);margin:1rem 0">You don't have permission to view this page.</p>
+  <a asp-controller="Account" asp-action="Login" class="btn btn-primary mt-2">
+    <i class="bi bi-arrow-left me-2"></i>Back to Login
+  </a>
+</div>

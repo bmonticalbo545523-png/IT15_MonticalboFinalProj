@@ -1,0 +1,227 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.ProjectTaskViewModel>
+@{ Layout = "_ResearchAdviserLayout"; ViewData["Title"] = "Group Submissions"; }
+@{
+    var project = ViewBag.Project as IT15_MonticalboFinalProj.Models.Project;
+    var members = ViewBag.Members as List<IT15_MonticalboFinalProj.Models.ProjectMember> ?? new();
+    bool allApproved = ViewBag.AllDeliverablesApproved ?? false;
+    int totalCount = Model.Count;
+    int approvedCount = Model.Count(m => m.Status == "Approved");
+    int progressPct = totalCount > 0 ? (int)((double)approvedCount / totalCount * 100) : 0;
+}
+
+<div class="page-header">
+  <div class="breadcrumb">
+    <a asp-action="MyResearchGroups">My Groups</a> / @(project?.ProjectName) / Submissions
+  </div>
+  <h2><i class="bi bi-clipboard-data me-2 text-primary"></i>Submission Tracker: @(project?.ProjectName)</h2>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        <div class="fs-2 fw-bold text-primary">@totalCount</div>
+        <div class="text-muted small">Total Deliverables</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        <div class="fs-2 fw-bold text-success">@approvedCount</div>
+        <div class="text-muted small">Approved</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        <div class="fs-2 fw-bold" style="color:#f59e0b">@Model.Count(m => m.Status != "Approved" && m.Status != "Pending")</div>
+        <div class="text-muted small">In Progress</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center border-0 shadow-sm">
+      <div class="card-body">
+        @if(project?.Status == "Completed")
+        {
+          <div class="fs-2 fw-bold text-success"><i class="bi bi-check-circle-fill"></i></div>
+          <div class="text-success small fw-bold">Project Finished</div>
+        }
+        else if(ViewBag.DefenseCompleted == true)
+        {
+          <div class="fs-2 fw-bold text-primary"><i class="bi bi-award"></i></div>
+          <div class="text-primary small fw-bold">Defense Done</div>
+        }
+        else if(allApproved)
+        {
+          <div class="fs-2 fw-bold text-success"><i class="bi bi-shield-check"></i></div>
+          <div class="text-success small fw-bold">Defense Eligible</div>
+        }
+        else
+        {
+          <div class="fs-2 fw-bold text-secondary"><i class="bi bi-shield-x"></i></div>
+          <div class="text-muted small">
+            @if(ViewBag.MemberCount != 3) {
+                <span>Need 3 Members</span>
+            } else {
+                <span>Tasks Pending</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+@if(ViewBag.DefenseCompleted == true && project?.Status != "Completed")
+{
+<div class="alert alert-primary d-flex align-items-center justify-content-between mb-4 border-0 shadow-sm">
+  <div>
+    <h5 class="alert-heading mb-1"><i class="bi bi-stars me-2"></i>Defense Successfully Completed!</h5>
+    <p class="mb-0 small">Please review the final documents and provide the final sign-off to publish this research to the repository.</p>
+  </div>
+  <button class="btn btn-primary" onclick="finalSignOff(@project?.Id)">
+    <i class="bi bi-check-circle me-1"></i>Final Project Sign-off
+  </button>
+</div>
+}
+
+<!-- Progress Bar -->
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between mb-2">
+      <span class="fw-bold">Overall Progress</span>
+      <span class="fw-bold">@progressPct%</span>
+    </div>
+    <div class="progress" style="height:12px;border-radius:6px">
+      <div class="progress-bar bg-success" role="progressbar" style="width:@(progressPct)%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Members -->
+<div class="card mb-4">
+  <div class="card-header"><h6 class="mb-0"><i class="bi bi-people me-2"></i>Group Members</h6></div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2">
+      @foreach(var m in members)
+      {
+        <span class="badge bg-primary fs-6 py-2 px-3"><i class="bi bi-person me-1"></i>@m.Student?.FullName</span>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Deliverables Table -->
+<div class="card">
+  <div class="card-header"><h6 class="mb-0"><i class="bi bi-list-check me-2"></i>All Deliverables & Submissions</h6></div>
+  <div class="card-body">
+    <table id="submissionsTable" class="table w-100">
+      <thead><tr>
+        <th>#</th><th>Title</th><th>Type</th><th>Status</th><th>Due Date</th><th>Attachment</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      @foreach(var t in Model)
+      {
+        <tr>
+          <td><span class="badge bg-dark">@(t.OrderIndex + 1)</span></td>
+          <td><strong>@t.Title</strong></td>
+          <td><span class="badge bg-light text-dark border">@t.Type</span></td>
+          <td>
+            @if(t.Status=="Approved"){ <span class="badge bg-success">Approved</span> }
+            else if(t.Status=="Submitted"){ <span class="badge bg-info">Submitted</span> }
+            else if(t.Status=="Under Review"){ <span class="badge bg-primary">Under Review</span> }
+            else if(t.Status=="Needs Revision"){ <span class="badge bg-warning text-dark">Needs Revision</span> }
+            else{ <span class="badge bg-secondary">@t.Status</span> }
+          </td>
+          <td style="font-size:.85rem">@(t.DueDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+          <td>
+            @if(!string.IsNullOrEmpty(t.AttachmentFileName))
+            {
+              <a href="@t.AttachmentPath" target="_blank" class="btn btn-xs btn-outline-primary"><i class="bi bi-paperclip me-1"></i>@t.AttachmentFileName</a>
+            }
+            else { <span class="text-muted">-</span> }
+          </td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="viewSubmissions(@t.Id, '@Html.Raw(t.Title.Replace("'","\\\\'"))')">
+              <i class="bi bi-eye me-1"></i>View
+            </button>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Submissions Modal -->
+<div class="modal fade" id="submissionsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Submissions: <span id="modalTitle"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="submissionContent">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#submissionsTable').DataTable({ pageLength:20, order:[[0,'asc']] });
+
+function viewSubmissions(taskId, title){
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('submissionContent').innerHTML = 'Loading...';
+    
+    fetch('/ResearchAdviser/GetSubmissionDetails?taskId='+taskId).then(r=>r.json()).then(data=>{
+        var html = '';
+        if(data.submissions.length === 0){
+            html = '<p class="text-muted text-center py-3">No submissions yet.</p>';
+        } else {
+            data.submissions.forEach(s => {
+                html += `<div class='card mb-2 border-0 bg-light'>
+                    <div class='card-body p-3'>
+                        <div class='d-flex justify-content-between'>
+                            <strong>${s.fullName}</strong>
+                            <small class='text-muted'>${s.submittedAt}</small>
+                        </div>
+                        <p class='mb-1 small'>${s.submissionNote || ""}</p>
+                        ${s.filePath ? `<a href='${s.filePath}' target='_blank' class='btn btn-sm btn-outline-primary'><i class="bi bi-download me-1"></i>${s.originalFileName || 'Download'}</a>` : ""}
+                    </div>
+                </div>`;
+            });
+        }
+        
+        if(data.comments.length > 0){
+            html += '<hr/><h6>Feedback History</h6>';
+            data.comments.forEach(c => {
+                html += `<div class='mb-2 pb-2 border-bottom'>
+                    <div class='fw-bold' style='font-size:11px'>${c.fullName} <span class='text-muted fw-normal'>- ${c.createdAt}</span></div>
+                    <div style='font-size:12px'>${c.content}</div>
+                </div>`;
+            });
+        }
+        
+        document.getElementById('submissionContent').innerHTML = html;
+    });
+    
+    new bootstrap.Modal(document.getElementById('submissionsModal')).show();
+}
+
+function finalSignOff(projectId){
+    if(!confirm('Are you sure you want to give the FINAL SIGN-OFF? This will mark the project as completed and move it to the Research Repository.')) return;
+    var fd = new FormData(); fd.append('projectId', projectId); fd.append('__RequestVerificationToken', document.querySelector('[name=__RequestVerificationToken]').value);
+    fetch('/ResearchAdviser/FinalProjectSignOff', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+</script>
+}

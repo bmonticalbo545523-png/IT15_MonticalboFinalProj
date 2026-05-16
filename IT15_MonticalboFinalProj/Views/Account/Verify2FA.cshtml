@@ -1,0 +1,41 @@
+@model IT15_MonticalboFinalProj.Models.ViewModels.TwoFactorViewModel
+@{ Layout = "_AuthLayout"; ViewData["Title"] = "2FA Verification"; }
+
+<div class="text-center mb-4">
+    <div class="display-6 mb-3"><i class="bi bi-shield-lock text-primary"></i></div>
+    <h4 class="fw-bold">Identity Verification</h4>
+    <p class="text-white-50 small">Enter the 6-digit code from your authenticator app to continue.</p>
+</div>
+
+<form asp-action="Verify2FA" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="RememberMe"/>
+    <input type="hidden" asp-for="ReturnUrl"/>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger small mb-4 py-2 px-3 rounded-3 text-center">
+             <i class="bi bi-exclamation-circle me-2"></i> Invalid verification code.
+        </div>
+    }
+
+    <div class="mb-4">
+        <label class="form-label">Authenticator Code</label>
+        <input asp-for="Code" class="form-control text-center fs-4 fw-bold tracking-widest" placeholder="••••••" maxlength="6" autofocus autocomplete="one-time-code"/>
+        <span asp-validation-for="Code" class="text-danger small"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 py-3 mb-4 shadow-lg">
+        Verify Account <i class="bi bi-chevron-right ms-2 small"></i>
+    </button>
+</form>
+
+<div class="text-center">
+    <a asp-action="Login" class="text-white-50 small text-decoration-none">
+        <i class="bi bi-arrow-left me-1"></i> Back to Sign In
+    </a>
+</div>
+
+<style>
+    .tracking-widest { letter-spacing: 0.2em; }
+</style>

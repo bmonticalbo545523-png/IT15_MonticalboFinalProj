@@ -1,0 +1,55 @@
+@model IT15_MonticalboFinalProj.Models.SystemSetting
+@{ Layout = "_SuperAdminLayout"; ViewData["Title"] = "System Settings"; }
+
+<div class="page-header">
+  <div class="breadcrumb"><a href="#">Dashboard</a> / Settings</div>
+  <h2><i class="bi bi-gear-fill me-2 text-primary"></i>System Settings</h2>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h5><i class="bi bi-sliders me-2 text-primary"></i>General Settings</h5></div>
+      <div class="card-body">
+        <form asp-action="SystemSettings" asp-controller="SuperAdmin" method="post">
+          @Html.AntiForgeryToken()
+          <div class="mb-4">
+            <label class="form-label">System Name</label>
+            <input name="SystemName" class="form-control" value="@Model.SystemName" required placeholder="e.g. Projexis"/>
+            <div class="form-text" style="color:var(--muted);font-size:.78rem">Displayed in the header and browser title.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Default Theme</label>
+            <select name="Theme" class="form-select">
+              <option value="light" selected="@(Model.Theme=="light")">Light Mode</option>
+              <option value="dark" selected="@(Model.Theme=="dark")">Dark Mode</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>Save Settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><h5><i class="bi bi-info-circle me-2 text-primary"></i>System Information</h5></div>
+      <div class="card-body">
+        <table class="table table-sm" style="color:var(--text)">
+          <tr><td class="text-muted">Application</td><td><strong>Projexis</strong></td></tr>
+          <tr><td class="text-muted">Version</td><td>1.0.0</td></tr>
+          <tr><td class="text-muted">Framework</td><td>ASP.NET Core 8 MVC</td></tr>
+          <tr><td class="text-muted">Database</td><td>SQL Server LocalDB</td></tr>
+          <tr><td class="text-muted">Environment</td><td><span class="badge-status badge-active">Production</span></td></tr>
+          <tr><td class="text-muted">Server Time</td><td>@DateTime.Now.ToString("MMM dd, yyyy HH:mm")</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card mt-4">
+      <div class="card-header"><h5><i class="bi bi-palette me-2 text-primary"></i>Live Theme Preview</h5></div>
+      <div class="card-body">
+        <p style="font-size:.875rem;color:var(--text2)">Use the moon/sun icon in the top bar to toggle between Light and Dark mode in real-time.</p>
+        <button class="btn btn-outline-primary" onclick="toggleTheme()"><i class="bi bi-circle-half me-2"></i>Toggle Theme</button>
+      </div>
+    </div>
+  </div>
+</div>

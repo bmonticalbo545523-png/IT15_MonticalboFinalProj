@@ -1,0 +1,352 @@
+@{
+    ViewData["Title"] = "Projexis | The Future of Academic Research Management";
+}
+
+<style>
+    :root {
+        --primary: #818cf8;
+        --primary-glow: rgba(129, 140, 248, 0.4);
+        --secondary: #0f172a;
+        --accent: #10b981;
+        --dark-bg: #020617;
+        --card-bg: rgba(255, 255, 255, 0.03);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --slate-300: #cbd5e1;
+        --slate-400: #94a3b8;
+        --slate-500: #64748b;
+    }
+
+    body {
+        background-color: var(--dark-bg);
+        font-family: 'Outfit', sans-serif;
+        color: white;
+        overflow-x: hidden;
+    }
+
+    /* Cinematic Navbar (Dark) */
+    .landing-nav {
+        position: fixed;
+        top: 0; width: 100%;
+        padding: 25px 0;
+        z-index: 1000;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .landing-nav.scrolled {
+        background: rgba(2, 6, 23, 0.8);
+        backdrop-filter: blur(20px);
+        padding: 15px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Hero Glow */
+    .hero {
+        position: relative;
+        padding: 220px 0 160px;
+        background: radial-gradient(circle at 50% -20%, rgba(129, 140, 248, 0.15), transparent 70%),
+                    radial-gradient(circle at 0% 100%, rgba(16, 185, 129, 0.05), transparent 50%);
+    }
+
+    .hero-title {
+        font-size: clamp(3.5rem, 9vw, 6rem);
+        font-weight: 800;
+        letter-spacing: -4px;
+        line-height: 0.9;
+        margin-bottom: 24px;
+    }
+
+    .hero-title span {
+        background: linear-gradient(to right, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+        color: var(--slate-400);
+        font-size: 1.25rem;
+        max-width: 750px;
+        margin: 0 auto 48px;
+        line-height: 1.6;
+    }
+
+    /* Module Command Suite (Glassmorphism) */
+    .command-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--card-border);
+        padding: 40px;
+        border-radius: 40px;
+        height: 100%;
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .command-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: var(--primary);
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 30px 60px -12px rgba(0,0,0,0.5), 0 0 40px rgba(129, 140, 248, 0.1);
+    }
+
+    .command-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at top right, rgba(129, 140, 248, 0.1), transparent 60%);
+        opacity: 0; transition: opacity 0.5s;
+    }
+    .command-card:hover::before { opacity: 1; }
+
+    .module-tag {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--primary);
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .module-icon-circle {
+        width: 60px;
+        height: 60px;
+        background: rgba(129, 140, 248, 0.1);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--primary);
+        margin-bottom: 25px;
+    }
+
+    /* Premium Buttons */
+    .btn-neon {
+        padding: 18px 45px;
+        border-radius: 100px;
+        font-weight: 800;
+        font-size: 1.1rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.4s ease;
+        border: none;
+    }
+
+    .btn-neon-indigo {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 20px 40px -10px var(--primary-glow);
+    }
+
+    .btn-neon-indigo:hover {
+        transform: scale(1.05);
+        box-shadow: 0 25px 60px -10px var(--primary-glow);
+        color: white;
+    }
+
+    .btn-neon-outline {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+    }
+
+    .btn-neon-outline:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: white;
+        color: white;
+    }
+
+    .stat-box {
+        padding: 30px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 25px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .grayscale-logos { filter: grayscale(1) invert(1) opacity(0.3); transition: all 0.3s; }
+    .grayscale-logos:hover { filter: grayscale(0) invert(0) opacity(1); }
+
+
+
+    /* Stats Glow */
+    .stats-glow {
+        background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+        height: 2px;
+        width: 100%;
+        margin-bottom: 80px;
+        opacity: 0.3;
+    }
+</style>
+
+<nav class="landing-nav" id="mainNav">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="d-flex align-items-center text-decoration-none">
+            <img src="/images/logo.png" alt="Projexis" style="height: 45px;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1085/1085732.png'">
+            <span class="fw-bold fs-4 text-white ms-2">Projexis</span>
+        </a>
+        <div class="d-flex gap-4">
+            @if(User.Identity?.IsAuthenticated == true)
+            {
+                <a href="/Account/RedirectToDashboard" class="btn btn-outline-light rounded-pill px-4 fw-bold small">DASHBOARD</a>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login" class="btn btn-link text-white text-decoration-none fw-bold small">SIGN IN</a>
+                <a asp-controller="Account" asp-action="Register" class="btn btn-primary rounded-pill px-4 fw-bold small">GET STARTED</a>
+            }
+        </div>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="container text-center">
+        <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 rounded-pill px-4 py-2 mb-4 fw-bold small">
+            <i class="bi bi-cpu-fill me-2"></i> VERSION 2.0 IS LIVE
+        </div>
+        <h1 class="hero-title">Research Beyond<br/><span>Limits.</span></h1>
+        <p class="hero-desc">
+            The high-performance command center for modern research. Track milestones, collaborate in real-time, and manage academic documentation with clinical precision.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            @if(User.Identity?.IsAuthenticated == true)
+            {
+                <a href="/Account/RedirectToDashboard" class="btn-neon btn-neon-indigo">
+                    Launch Command Suite <i class="bi bi-chevron-right small"></i>
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Register" class="btn-neon btn-neon-indigo">
+                    Start Your Project <i class="bi bi-rocket-takeoff-fill"></i>
+                </a>
+                <a href="#suite" class="btn-neon btn-neon-outline">
+                    Explore Modules
+                </a>
+            }
+        </div>
+        
+        <div class="row mt-5 pt-5 g-4">
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <h3 class="fw-bold mb-1">98%</h3>
+                    <p class="text-white-50 small mb-0">REVIEW ACCURACY</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <h3 class="fw-bold mb-1">Real-Time</h3>
+                    <p class="text-white-50 small mb-0">COLLABORATION</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <h3 class="fw-bold mb-1">Instant</h3>
+                    <p class="text-white-50 small mb-0">PDF EXPORTS</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-box">
+                    <h3 class="fw-bold mb-1">End-to-End</h3>
+                    <p class="text-white-50 small mb-0">PDLC TRACKING</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5" id="suite">
+    <div class="container py-5">
+        <div class="text-center mb-5 pb-4">
+            <h2 class="display-5 fw-bold mb-3">The Command Suite</h2>
+            <p class="text-white-50 fs-5">A purpose-built ecosystem for every phase of the research lifecycle.</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- PDLC Tracking -->
+            <div class="col-lg-4 col-md-6">
+                <div class="command-card">
+                    <span class="module-tag">Module 01</span>
+                    <div class="module-icon-circle"><i class="bi bi-activity"></i></div>
+                    <h3 class="fw-bold mb-3">Lifecycle Engine</h3>
+                    <p class="text-white-50 small">Monitor your project's PDLC stages with real-time percentage updates and milestone tracking. Never lose sight of where you are.</p>
+                </div>
+            </div>
+
+            <!-- Resource Repository -->
+            <div class="col-lg-4 col-md-6">
+                <div class="command-card">
+                    <span class="module-tag">Module 02</span>
+                    <div class="module-icon-circle"><i class="bi bi-folder2-open"></i></div>
+                    <h3 class="fw-bold mb-3">Research Repository</h3>
+                    <p class="text-white-50 small">A department-wide digital archive for finalized research papers, abstracts, and historical academic documentation.</p>
+                </div>
+            </div>
+
+            <!-- Collaboration Hub -->
+            <div class="col-lg-4 col-md-6">
+                <div class="command-card">
+                    <span class="module-tag">Module 03</span>
+                    <div class="module-icon-circle"><i class="bi bi-chat-dots-fill"></i></div>
+                    <h3 class="fw-bold mb-3">Collaboration Hub</h3>
+                    <p class="text-white-50 small">Real-time team messaging with user-specific alignment and document version control to keep your research moving.</p>
+                </div>
+            </div>
+
+            <!-- Audit & Transparency -->
+            <div class="col-lg-4 col-md-6">
+                <div class="command-card">
+                    <span class="module-tag">Module 04</span>
+                    <div class="module-icon-circle"><i class="bi bi-clock-history"></i></div>
+                    <h3 class="fw-bold mb-3">Audit Timeline</h3>
+                    <p class="text-white-50 small">A transparent history of every stage change and feedback note. Full accountability for both students and advisers.</p>
+                </div>
+            </div>
+
+            <!-- PDF Reporting -->
+            <div class="col-lg-4 col-md-6">
+                <div class="command-card">
+                    <span class="module-tag">Module 05</span>
+                    <div class="module-icon-circle"><i class="bi bi-file-earmark-pdf-fill"></i></div>
+                    <h3 class="fw-bold mb-3">Professional Reporting</h3>
+                    <p class="text-white-50 small">One-click PDF export functionality with print-optimized styles for professional project summaries and final submissions.</p>
+                </div>
+            </div>
+
+            <!-- Future Module Placeholder -->
+            <div class="col-lg-4 col-md-6">
+                <div class="command-card" style="opacity: 0.5;">
+                    <span class="module-tag text-muted">Coming Soon</span>
+                    <div class="module-icon-circle bg-dark text-muted"><i class="bi bi-graph-up-arrow"></i></div>
+                    <h3 class="fw-bold mb-3">AI Analytics</h3>
+                    <p class="text-muted small">Automated research gap analysis and citation auditing powered by the next generation of Projexis Intelligence.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container py-5 text-center">
+        <div class="grayscale-logos d-flex justify-content-center flex-wrap gap-5 fs-2">
+            <i class="bi bi-microsoft"></i>
+            <i class="bi bi-google"></i>
+            <i class="bi bi-github"></i>
+            <i class="bi bi-stack-overflow"></i>
+            <i class="bi bi-amd"></i>
+        </div>
+    </div>
+</section>
+
+<script>
+    window.addEventListener('scroll', function() {
+        const nav = document.getElementById('mainNav');
+        if (window.scrollY > 50) {
+            nav.classList.add('scrolled');
+        } else {
+            nav.classList.remove('scrolled');
+        }
+    });
+</script>

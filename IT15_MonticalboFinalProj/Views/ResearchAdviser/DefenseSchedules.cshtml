@@ -1,0 +1,210 @@
+@model List<IT15_MonticalboFinalProj.Models.DefenseSchedule>
+@{ Layout = "_ResearchAdviserLayout"; ViewData["Title"] = "Defense Schedules"; }
+@{
+    var availability = ViewBag.Availability as List<IT15_MonticalboFinalProj.Models.AdviserAvailability> ?? new();
+}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <div class="breadcrumb">Research Adviser / Defense Schedules</div>
+    <h2><i class="bi bi-calendar-check me-2 text-primary"></i>Defense Schedules</h2>
+  </div>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#availabilityModal">
+    <i class="bi bi-clock me-1"></i>Set Availability
+  </button>
+</div>
+
+<!-- My Availability Slots -->
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history me-2 text-info"></i>My Available Time Slots</h5></div>
+  <div class="card-body">
+    @if(availability.Any())
+    {
+      <div class="row g-3">
+      @foreach(var slot in availability)
+      {
+        <div class="col-md-3">
+          <div class="card border-0 bg-light h-100">
+            <div class="card-body p-3 text-center">
+              <div class="fw-bold">@slot.AvailableDate.ToString("MMM dd, yyyy")</div>
+              <div class="text-muted small">@slot.StartTime.ToString(@"hh\:mm") - @slot.EndTime.ToString(@"hh\:mm")</div>
+              @if(slot.IsBooked)
+              {
+                <span class="badge bg-warning text-dark mt-2">Booked</span>
+              }
+              else
+              {
+                <button class="btn btn-sm btn-outline-danger mt-2" onclick="removeSlot(@slot.Id)"><i class="bi bi-trash me-1"></i>Remove</button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+      </div>
+    }
+    else
+    {
+      <div class="text-center py-3 text-muted">
+        <i class="bi bi-clock fs-3 d-block mb-2"></i>
+        No availability slots set. Click "Set Availability" to add your available times.
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Defense Schedules -->
+<div class="card">
+  <div class="card-header"><h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Scheduled Defenses for My Groups</h5></div>
+  <div class="card-body">
+    <table id="defensesTable" class="table w-100">
+      <thead><tr>
+        <th>Group</th><th>Students</th><th>Date</th><th>Time</th><th>Location</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      @foreach(var d in Model)
+      {
+        var students = d.Project?.Members?.Select(m => m.Student?.FullName).Where(n => n != null) ?? new List<string?>();
+        <tr>
+          <td><strong>@d.Project?.ProjectName</strong></td>
+          <td><small>@string.Join(", ", students)</small></td>
+          <td>@d.ScheduledDate.ToString("MMM dd, yyyy")</td>
+          <td>@d.StartTime.ToString(@"hh\:mm") - @d.EndTime.ToString(@"hh\:mm")</td>
+          <td>@d.Location</td>
+          <td>
+            @if(d.Status=="Pending"){ <span class="badge bg-warning text-dark">Pending Approval</span> }
+            else if(d.Status=="Approved by Adviser"){ <span class="badge bg-info">Approved</span> }
+            else if(d.Status=="Confirmed"){ <span class="badge bg-success">Confirmed</span> }
+            else if(d.Status=="Defended"){ <span class="badge bg-success"><i class="bi bi-award me-1"></i>Defended</span> }
+            else if(d.Status=="Re-defense Required"){ <span class="badge bg-warning text-dark"><i class="bi bi-arrow-counterclockwise me-1"></i>Re-defense Required</span> }
+            else if(d.Status=="Completed"){ <span class="badge bg-dark">Completed</span> }
+            else{ <span class="badge bg-danger">Cancelled</span> }
+          </td>
+          <td>
+            @if(d.Status == "Pending")
+            {
+              <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-success" onclick="approveDefense(@d.Id)"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="rejectDefense(@d.Id)"><i class="bi bi-x-lg"></i></button>
+              </div>
+            }
+            else if(d.Status == "Confirmed" || d.Status == "Approved by Adviser")
+            {
+              <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-success" onclick="completeDefense(@d.Id, true)"><i class="bi bi-award me-1"></i>Defended</button>
+                <button class="btn btn-sm btn-outline-warning" onclick="completeDefense(@d.Id, false)"><i class="bi bi-arrow-counterclockwise me-1"></i>Re-defense</button>
+              </div>
+            }
+            else if(d.Status == "Defended" || d.Status == "Re-defense Required")
+            {
+              <button class="btn btn-sm btn-outline-secondary" onclick="resetStatus(@d.Id)" title="Correct mistake">
+                <i class="bi bi-arrow-left-right me-1"></i>Reset Status
+              </button>
+            }
+            @if(!string.IsNullOrEmpty(d.Remarks))
+            {
+              <small class="text-muted d-block mt-1">@d.Remarks</small>
+            }
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Availability Modal -->
+<div class="modal fade" id="availabilityModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-clock me-2 text-primary"></i>Set Availability</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="availabilityForm">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Available Date</label>
+            <input name="availableDate" type="date" class="form-control" id="availDate" required/>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label">Start Time</label>
+              <input name="startTime" type="time" class="form-control" required/>
+            </div>
+            <div class="col-6">
+              <label class="form-label">End Time</label>
+              <input name="endTime" type="time" class="form-control" required/>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitAvailability()">Add Slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#defensesTable').DataTable({ pageLength:10 });
+var token = document.querySelector('[name=__RequestVerificationToken]')?.value;
+
+// Set min date to today
+document.getElementById('availDate').min = new Date().toISOString().split('T')[0];
+
+function submitAvailability(){
+    var f = document.getElementById('availabilityForm');
+    if(!f.checkValidity()){ f.reportValidity(); return; }
+    ajaxPost('/ResearchAdviser/SetAvailability', 'availabilityForm', function(){ location.reload(); });
+}
+
+function removeSlot(id){
+    if(!confirm('Remove this availability slot?')) return;
+    var fd = new FormData(); fd.append('id',id); fd.append('__RequestVerificationToken',token);
+    fetch('/ResearchAdviser/RemoveAvailability', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+
+function approveDefense(id){
+    if(!confirm('Approve this defense schedule?')) return;
+    var fd = new FormData(); fd.append('id',id); fd.append('__RequestVerificationToken',token);
+    fetch('/ResearchAdviser/ApproveDefense', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+
+function rejectDefense(id){
+    var remarks = prompt('Reason for rejection (optional):');
+    var fd = new FormData(); fd.append('id',id); fd.append('__RequestVerificationToken',token);
+    if(remarks) fd.append('remarks', remarks);
+    fetch('/ResearchAdviser/RejectDefense', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+
+function completeDefense(id, isPassed){
+    var action = isPassed ? "mark as Defended" : "require Re-defense";
+    if(!confirm('Are you sure you want to ' + action + ' for this group?')) return;
+    var fd = new FormData(); fd.append('id',id); fd.append('isPassed', isPassed); fd.append('__RequestVerificationToken',token);
+    fetch('/ResearchAdviser/CompleteDefense', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+function resetStatus(id){
+    if(!confirm('Reset this defense status? This will allow you to mark it again and revert project status.')) return;
+    var fd = new FormData(); fd.append('id',id); fd.append('__RequestVerificationToken',token);
+    fetch('/ResearchAdviser/ResetDefenseStatus', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success){ showToast(res.message,'success'); setTimeout(()=>location.reload(),1200); }
+        else showToast(res.message,'danger');
+    });
+}
+</script>
+}

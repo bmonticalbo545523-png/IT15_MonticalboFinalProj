@@ -1,0 +1,67 @@
+@model List<IT15_MonticalboFinalProj.Models.Project>
+@{
+    ViewData["Title"] = "Research Repository";
+    Layout = User.IsInRole("SuperAdmin") ? "_SuperAdminLayout" : (User.IsInRole("Administrator") ? "_AdminLayout" : (User.IsInRole("ResearchAdviser") ? "_ResearchAdviserLayout" : "_StudentLayout"));
+}
+
+<div class="page-header mb-4">
+    <div class="breadcrumb"><a href="#">Dashboard</a> / Repository</div>
+    <h2><i class="bi bi-folder2-open me-2 text-primary"></i>Department Research Repository</h2>
+    <p class="text-muted">Access all finalized research projects and their documents in your department.</p>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <table id="repoTable" class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Project Title</th>
+                    <th>Authors</th>
+                    <th>Research Adviser</th>
+                    <th>Date Completed</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-bold">@p.ProjectName</div>
+                            <div class="small text-muted">@p.Department?.Name</div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach(var m in p.Members)
+                                {
+                                    <span class="badge bg-light text-dark border">@m.Student?.FullName</span>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">@p.Adviser?.FullName</div>
+                        </td>
+                        <td>
+                            <div class="small">@p.CreatedAt.ToString("MMM dd, yyyy")</div>
+                        </td>
+                        <td>
+                            <a asp-action="ProjectDocuments" asp-route-projectId="@p.Id" class="btn btn-sm btn-primary">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>View Documents
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $('#repoTable').DataTable({
+        pageLength: 25,
+        responsive: true,
+        order: [[3, 'desc']]
+    });
+</script>
+}

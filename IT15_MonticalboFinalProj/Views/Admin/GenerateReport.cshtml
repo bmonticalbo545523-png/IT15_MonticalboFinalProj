@@ -1,0 +1,172 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "System Report";
+    var projects = ViewBag.Projects as List<IT15_MonticalboFinalProj.Models.Project> ?? new();
+    var users = ViewBag.Users as List<IT15_MonticalboFinalProj.Models.ApplicationUser> ?? new();
+    var generatedAt = ViewBag.GeneratedAt as DateTime? ?? DateTime.Now;
+}
+
+<div class="page-header d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="breadcrumb"><a href="@Url.Action("Dashboard", "Admin")">Dashboard</a> / Reports</div>
+        <h2><i class="bi bi-file-earmark-bar-graph-fill me-2 text-primary"></i>System Report</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-print-custom" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print Report
+        </button>
+        <button class="btn btn-success" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i>Export to Excel
+        </button>
+    </div>
+</div>
+
+<div id="report-container">
+    <div class="card mb-4" style="border-top: 4px solid var(--primary)">
+        <div class="card-body py-4">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h4 class="fw-bold mb-1">Projexis Management System</h4>
+                    <p class="text-muted mb-0">Comprehensive System Overview</p>
+                </div>
+                <div class="text-end">
+                    <p class="mb-1 text-muted small">Generated On</p>
+                    <h6 class="fw-bold mb-0">@generatedAt.ToString("MMMM dd, yyyy h:mm tt")</h6>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3 rounded" style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15)">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-2">Total Projects</h6>
+                        <h3 class="fw-bold mb-0 text-primary">@projects.Count()</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded" style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15)">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-2">Active Projects</h6>
+                        <h3 class="fw-bold mb-0 text-success">@projects.Count(p => p.Status == "Active")</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded" style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15)">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-2">Total Users</h6>
+                        <h3 class="fw-bold mb-0 text-warning">@users.Count()</h3>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15)">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-2">Archived Projects</h6>
+                        <h3 class="fw-bold mb-0 text-danger">@projects.Count(p => p.IsArchived)</h3>
+                    </div>
+                </div>
+            </div>
+
+            <h5 class="fw-bold mb-3 mt-5"><i class="bi bi-kanban text-primary me-2"></i>Projects Summary</h5>
+            <div class="table-responsive mb-5">
+                <table id="projectsReportTable" class="table table-bordered table-striped w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Project Name</th>
+                            <th>Start Date</th>
+                            <th>Deadline</th>
+                            <th>Status</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var p in projects.OrderByDescending(p => p.CreatedAt))
+                        {
+                            <tr>
+                                <td>@p.Id</td>
+                                <td class="fw-bold">@p.ProjectName</td>
+                                <td>@p.StartDate.ToString("MMM dd, yyyy")</td>
+                                <td>@(p.EndDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+                                <td>@p.Status</td>
+                                <td>@(p.IsArchived ? "Archived" : "Active")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <h5 class="fw-bold mb-3"><i class="bi bi-people text-primary me-2"></i>Users Summary</h5>
+            <div class="table-responsive">
+                <table id="usersReportTable" class="table table-bordered table-striped w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Username</th>
+                            <th>Status</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach(var u in users.OrderBy(u => u.FullName))
+                        {
+                            <tr>
+                                <td>@u.Id</td>
+                                <td class="fw-bold">@u.FullName</td>
+                                <td>@u.Email</td>
+                                <td>@u.UserName</td>
+                                <td>@u.Status</td>
+                                <td>@(u.IsActive ? "Active" : "Archived")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            <div class="mt-5 pt-4 border-top">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="text-muted small mb-1">Prepared By:</p>
+                        <h6 class="fw-bold mb-0">@ViewBag.PreparedBy</h6>
+                        <p class="text-muted small mb-0">Authorized Administrator</p>
+                        
+                        <div class="mt-4 pt-2 border-top" style="width: 250px;">
+                            <p class="small text-center">Signature over Printed Name</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="text-muted small mb-1">Date Issued:</p>
+                        <h6 class="fw-bold mb-0">@DateTime.Now.ToString("MMMM dd, yyyy")</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        body * { visibility: hidden; }
+        #report-container, #report-container * { visibility: visible; }
+        #report-container { position: absolute; left: 0; top: 0; width: 100%; }
+        .btn, .breadcrumb, .page-header { display: none !important; }
+        .card { border: none !important; box-shadow: none !important; }
+        .table { border: 1px solid #dee2e6 !important; }
+        .table th, .table td { border: 1px solid #dee2e6 !important; padding: 0.5rem !important; }
+    }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            var wb = XLSX.utils.book_new();
+            
+            // Export Projects
+            var wsProjects = XLSX.utils.table_to_sheet(document.getElementById('projectsReportTable'));
+            XLSX.utils.book_append_sheet(wb, wsProjects, "Projects Summary");
+            
+            // Export Users
+            var wsUsers = XLSX.utils.table_to_sheet(document.getElementById('usersReportTable'));
+            XLSX.utils.book_append_sheet(wb, wsUsers, "Users Summary");
+            
+            // Save file
+            XLSX.writeFile(wb, "Projexis_Report_@generatedAt.ToString("yyyyMMdd")" + ".xlsx");
+        }
+    </script>
+}

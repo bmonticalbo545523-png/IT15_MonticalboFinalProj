@@ -1,0 +1,112 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.AdminUserViewModel>
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Archive"; }
+@{
+    var archivedProjects = ViewBag.ArchivedProjects as List<IT15_MonticalboFinalProj.Models.Project> ?? new();
+}
+
+<div class="page-header">
+  <div class="breadcrumb"><a href="#">Dashboard</a> / Archive</div>
+  <h2><i class="bi bi-archive-fill me-2 text-warning"></i>Archive Repository</h2>
+</div>
+
+<ul class="nav nav-tabs mb-4" id="archiveTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" role="tab">
+      <i class="bi bi-people me-2"></i>Archived Users
+      <span class="badge bg-secondary ms-1">@Model.Count</span>
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects-pane" type="button" role="tab">
+      <i class="bi bi-journal-richtext me-2"></i>Archived Projects
+      <span class="badge bg-secondary ms-1">@archivedProjects.Count</span>
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="archiveTabsContent">
+  <!-- Users Tab -->
+  <div class="tab-pane fade show active" id="users-pane" role="tabpanel">
+    <div class="card">
+      <div class="card-body">
+        <table id="archivedUsersTable" class="table w-100">
+          <thead><tr>
+            <th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Archived On</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+          @foreach(var user in Model)
+          {
+            <tr>
+              <td><strong>@user.FullName</strong></td>
+              <td>@user.Email</td>
+              <td><span class="badge bg-secondary">@user.Role</span></td>
+              <td>@user.DepartmentName</td>
+              <td style="font-size:.8rem;color:var(--muted)">@(user.ArchivedAt?.ToLocalTime().ToString("MMM dd, yyyy") ?? "-")</td>
+              <td>
+                <button class="btn-icon" style="background:rgba(16,185,129,.15);color:#059669" title="Restore"
+                  onclick="restoreUser('@user.Id','@user.FullName')">
+                  <i class="bi bi-arrow-counterclockwise"></i></button>
+              </td>
+            </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects Tab -->
+  <div class="tab-pane fade" id="projects-pane" role="tabpanel">
+    <div class="card">
+      <div class="card-body">
+        <table id="archivedProjectsTable" class="table w-100">
+          <thead><tr>
+            <th>Project Name</th><th>Status</th><th>Created By</th><th>Archived On</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+          @foreach(var p in archivedProjects)
+          {
+            <tr>
+              <td><strong>@p.ProjectName</strong></td>
+              <td><span class="badge bg-secondary">@p.Status</span></td>
+              <td>@(p.CreatedBy?.FullName ?? "-")</td>
+              <td style="font-size:.8rem;color:var(--muted)">@(p.ArchivedAt?.ToLocalTime().ToString("MMM dd, yyyy") ?? "-")</td>
+              <td>
+                <button class="btn-icon" style="background:rgba(16,185,129,.15);color:#059669" title="Restore"
+                  onclick="restoreProject(@p.Id)">
+                  <i class="bi bi-arrow-counterclockwise"></i></button>
+              </td>
+            </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#archivedUsersTable').DataTable({ pageLength:10 });
+$('#archivedProjectsTable').DataTable({ pageLength:10 });
+var token = document.querySelector('[name=__RequestVerificationToken]')?.value;
+
+function restoreUser(id, name){
+    if(!confirm('Restore user "'+name+'"?')) return;
+    var fd = new FormData(); fd.append('id',id); if(token) fd.append('__RequestVerificationToken',token);
+    fetch('@Url.Action("RestoreUser","Admin")', {method:'POST', body:fd}).then(r=>r.json()).then(res=>{
+        if(res.success){showToast(res.message,'success');setTimeout(()=>location.reload(),1200);}
+        else showToast(res.message,'danger');
+    });
+}
+
+function restoreProject(id){
+    if(!confirm('Restore this project?')) return;
+    var fd = new FormData(); fd.append('id',id); if(token) fd.append('__RequestVerificationToken',token);
+    fetch('@Url.Action("RestoreProject","Admin")', {method:'POST', body:fd}).then(r=>r.json()).then(res=>{
+        if(res.success){showToast(res.message,'success');setTimeout(()=>location.reload(),1200);}
+        else showToast(res.message,'danger');
+    });
+}
+</script>
+}

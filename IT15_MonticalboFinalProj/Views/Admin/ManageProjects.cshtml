@@ -1,0 +1,283 @@
+@model List<IT15_MonticalboFinalProj.Models.ViewModels.ProjectViewModel>
+@{ Layout = "_AdminLayout"; ViewData["Title"] = "Manage Research Groups"; }
+@{
+    var advisers = ViewBag.Advisers as List<IT15_MonticalboFinalProj.Models.ApplicationUser> ?? new();
+    var students = ViewBag.Students as List<IT15_MonticalboFinalProj.Models.ApplicationUser> ?? new();
+    var archived = ViewBag.ArchivedProjects as List<IT15_MonticalboFinalProj.Models.Project> ?? new();
+}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <div class="breadcrumb">Admin / Research Groups</div>
+    <h2><i class="bi bi-mortarboard me-2 text-primary"></i>Manage Research Groups</h2>
+  </div>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+    <i class="bi bi-plus-lg me-1"></i>New Group
+  </button>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <table id="projectsTable" class="table w-100">
+      <thead><tr>
+        <th>Group Name</th><th>Adviser</th><th>Status</th><th>Members</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      @foreach(var p in Model)
+      {
+        <tr>
+          <td><strong>@p.ProjectName</strong><br/><small class="text-muted">Since @p.StartDate.ToShortDateString()</small></td>
+          <td>@(p.AdviserName ?? "Unassigned")</td>
+          <td>
+            @if(p.Status=="Proposal"){ <span class="badge bg-info">Proposal</span> }
+            else if(p.Status=="In Progress"){ <span class="badge bg-primary">In Progress</span> }
+            else if(p.Status=="For Defense"){ <span class="badge bg-warning text-dark">For Defense</span> }
+            else { <span class="badge bg-success">Completed</span> }
+          </td>
+          <td>
+             <button class="btn btn-sm btn-outline-secondary" onclick="manageMembers(@p.Id, '@Html.Raw(p.ProjectName.Replace("'","\\'"))')">
+                <i class="bi bi-people me-1"></i>Manage
+             </button>
+             <div class="mt-1">
+                @if(p.MemberCount == 3) {
+                    <span class="badge bg-success small"><i class="bi bi-check-all me-1"></i>3 Members</span>
+                } else {
+                    <span class="badge bg-danger small" title="Required exactly 3 students"><i class="bi bi-exclamation-triangle me-1"></i>@p.MemberCount/3 Members</span>
+                }
+             </div>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn-icon" style="background:rgba(79,70,229,.15);color:var(--primary)" title="Edit" 
+                onclick="editProject(@p.Id)"><i class="bi bi-pencil"></i></button>
+              <button class="btn-icon" style="background:rgba(245,158,11,.15);color:#d97706" title="Archive" 
+                onclick="confirmArchive(@p.Id, '@Html.Raw(p.ProjectName.Replace("'","\\'"))')"><i class="bi bi-archive"></i></button>
+            </div>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2 text-primary"></i>Create Research Group</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addForm">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Group Name</label><input name="ProjectName" class="form-control" required/></div>
+          <div class="mb-3"><label class="form-label">Description</label><textarea name="Description" class="form-control" rows="3"></textarea></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label">Start Date</label><input name="StartDate" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required/></div>
+            <div class="col-6"><label class="form-label">Status</label>
+              <select name="Status" class="form-select">
+                <option value="Proposal">Proposal</option><option value="In Progress">In Progress</option>
+                <option value="For Defense">For Defense</option><option value="Completed">Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Research Adviser</label>
+            <select name="AdviserId" class="form-select">
+                <option value="">-- Unassigned --</option>
+                @foreach(var a in advisers){ <option value="@a.Id">@a.FullName</option> }
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitAdd()">Create</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Research Group</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" id="editId"/>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Group Name</label><input name="ProjectName" id="editName" class="form-control" required/></div>
+          <div class="mb-3"><label class="form-label">Description</label><textarea name="Description" id="editDesc" class="form-control" rows="3"></textarea></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label">Start Date</label><input name="StartDate" id="editStart" type="date" class="form-control" required/></div>
+            <div class="col-6"><label class="form-label">Status</label>
+              <select name="Status" id="editStatus" class="form-select">
+                <option value="Proposal">Proposal</option><option value="In Progress">In Progress</option>
+                <option value="For Defense">For Defense</option><option value="Completed">Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Research Adviser</label>
+            <select name="AdviserId" id="editAdviser" class="form-select">
+                <option value="">-- Unassigned --</option>
+                @foreach(var a in advisers){ <option value="@a.Id">@a.FullName</option> }
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="submitEdit()">Save Changes</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Member Management Modal -->
+<div class="modal fade" id="memberModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-people me-2 text-primary"></i>Manage Group Members: <span id="memberGroupName"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Add Student to Group</label>
+            <div class="d-flex gap-2">
+                <select id="studentSelect" class="form-select">
+                    <option value="">-- Select Student --</option>
+                    @foreach(var s in students){ <option value="@s.Id">@s.FullName (@s.UserName)</option> }
+                </select>
+                <button class="btn btn-primary" onclick="addStudent()">Add</button>
+                <button class="btn btn-outline-primary" onclick="addAllStudents()" title="Add up to 3 available students">Add All</button>
+            </div>
+        </div>
+        <hr/>
+        <h6>Current Members</h6>
+        <div id="memberList" class="list-group list-group-flush mt-2">
+            <!-- Members will be loaded here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary w-100" onclick="location.reload()">Submit & Update Status</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Archive Modal -->
+<div class="modal fade" id="archiveModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-warning"><i class="bi bi-archive me-2"></i>Archive</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body"><p>Archive group <strong id="archiveName"></strong>?</p></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-warning text-white" onclick="submitArchive()">Archive</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+$('#projectsTable').DataTable({ dom:"<'row'<'col-sm-6'l><'col-sm-6'f>><'row'<'col-12'tr>><'row'<'col-sm-5'i><'col-sm-7'p>>", pageLength:10 });
+
+var currentProjectId = 0;
+var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+function submitAdd(){
+  var f=document.getElementById('addForm');if(!f.checkValidity()){f.reportValidity();return;}
+  ajaxPost('/Admin/AddProject','addForm',function(){ location.reload(); });
+}
+
+function editProject(id){
+  fetch('/Admin/GetProjectDetails/'+id).then(r=>r.json()).then(data=>{
+    document.getElementById('editId').value=data.id;
+    document.getElementById('editName').value=data.projectName;
+    document.getElementById('editDesc').value=data.description;
+    document.getElementById('editStart').value=data.startDate;
+    document.getElementById('editStatus').value=data.status;
+    document.getElementById('editAdviser').value=data.adviserId || "";
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+  });
+}
+
+function submitEdit(){
+  ajaxPost('/Admin/EditProject','editForm',function(){ location.reload(); });
+}
+
+function confirmArchive(id, name){
+  currentProjectId = id;
+  document.getElementById('archiveName').textContent = name;
+  new bootstrap.Modal(document.getElementById('archiveModal')).show();
+}
+
+function submitArchive(){
+  var fd = new FormData(); fd.append('id', currentProjectId); fd.append('__RequestVerificationToken', token);
+  fetch('/Admin/ArchiveProject', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+    if(res.success){ location.reload(); } else { alert(res.message); }
+  });
+}
+
+function manageMembers(id, name){
+    currentProjectId = id;
+    document.getElementById('memberGroupName').textContent = name;
+    loadMembers();
+    new bootstrap.Modal(document.getElementById('memberModal')).show();
+}
+
+function loadMembers(){
+    fetch('/Admin/GetProjectDetails/'+currentProjectId).then(r=>r.json()).then(data=>{
+        var list = document.getElementById('memberList');
+        list.innerHTML = "";
+        if(data.members.length === 0) {
+            list.innerHTML = "<div class='text-center p-3 text-muted small'>No members in this group yet.</div>";
+            return;
+        }
+        data.members.forEach(m => {
+            var item = document.createElement('div');
+            item.className = "list-group-item d-flex justify-content-between align-items-center";
+            item.innerHTML = `<span>${m.fullName}</span>
+                              <button class="btn btn-sm text-danger" onclick="removeStudent('${m.studentId}')">
+                                <i class="bi bi-x-circle"></i>
+                              </button>`;
+            list.appendChild(item);
+        });
+    });
+}
+
+function addStudent(){
+    var studentId = document.getElementById('studentSelect').value;
+    if(!studentId) return;
+    
+    var fd = new FormData(); fd.append('projectId', currentProjectId); fd.append('studentId', studentId); fd.append('__RequestVerificationToken', token);
+    fetch('/Admin/AddStudentToProject', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success) { loadMembers(); } else { alert(res.message); }
+    });
+}
+
+function addAllStudents(){
+    if(!confirm("Add all available students to this group (up to the limit of 3)?")) return;
+    var fd = new FormData(); fd.append('projectId', currentProjectId); fd.append('__RequestVerificationToken', token);
+    fetch('/Admin/AddAllStudentsToProject', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success) { showToast(res.message, 'success'); loadMembers(); } else { showToast(res.message, 'danger'); }
+    });
+}
+
+function removeStudent(studentId){
+    if(!confirm("Remove student from this group?")) return;
+    var fd = new FormData(); fd.append('projectId', currentProjectId); fd.append('studentId', studentId); fd.append('__RequestVerificationToken', token);
+    fetch('/Admin/RemoveStudentFromProject', { method:'POST', body:fd }).then(r=>r.json()).then(res=>{
+        if(res.success) { loadMembers(); } else { alert(res.message); }
+    });
+}
+</script>
+}

@@ -1,0 +1,143 @@
+@model List<IT15_MonticalboFinalProj.Models.ResearchDocument>
+@{
+    ViewData["Title"] = "Project Documents";
+    Layout = User.IsInRole("SuperAdmin") ? "_SuperAdminLayout" : (User.IsInRole("Administrator") ? "_AdminLayout" : (User.IsInRole("ResearchAdviser") ? "_ResearchAdviserLayout" : "_StudentLayout"));
+    int projectId = ViewBag.ProjectId;
+    var submissions = ViewBag.Submissions as List<IT15_MonticalboFinalProj.Models.DeliverableSubmission> ?? new();
+}
+
+<div class="page-header mb-4">
+    <div class="breadcrumb"><a href="/Tracking/ProjectDetails/@projectId">Project</a> / Documents</div>
+    <h2><i class="bi bi-file-earmark-text me-2 text-primary"></i>@ViewBag.ProjectName Documents</h2>
+    <p class="text-muted">View all documents associated with this research project.</p>
+</div>
+
+<ul class="nav nav-tabs mb-4" id="docTabs" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active" id="repository-tab" data-bs-toggle="tab" data-bs-target="#repository-pane" type="button" role="tab">
+            <i class="bi bi-folder-check me-2"></i>Official Repository
+            <span class="badge bg-secondary ms-1">@Model.Count</span>
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" id="submissions-tab" data-bs-toggle="tab" data-bs-target="#submissions-pane" type="button" role="tab">
+            <i class="bi bi-people me-2"></i>Student Submissions
+            <span class="badge bg-secondary ms-1">@submissions.Count</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="docTabsContent">
+    <!-- Official Repository Documents -->
+    <div class="tab-pane fade show active" id="repository-pane" role="tabpanel">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <table id="docsTable" class="table table-hover w-100">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var doc in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">@doc.Title</div>
+                                    <small class="text-muted text-truncate d-block" style="max-width: 300px;">@doc.Abstract</small>
+                                </td>
+                                <td>@doc.UploadedBy?.FullName</td>
+                                <td>@doc.UploadedAt.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    @if (doc.IsFinal)
+                                    {
+                                        <span class="badge bg-success">Final Paper</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">Draft v@doc.Version</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="@doc.FilePath" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Submissions (Passed Documents) -->
+    <div class="tab-pane fade" id="submissions-pane" role="tabpanel">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <table id="submissionsTable" class="table table-hover w-100">
+                    <thead>
+                        <tr>
+                            <th>Deliverable</th>
+                            <th>Submitted By</th>
+                            <th>Submission Date</th>
+                            <th>Note</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sub in submissions)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">@sub.ProjectTask?.Title</div>
+                                    <small class="text-muted">Type: @sub.ProjectTask?.Type</small>
+                                </td>
+                                <td>@sub.Student?.FullName</td>
+                                <td>@sub.SubmittedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                <td>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 200px;" title="@sub.SubmissionNote">
+                                        @(string.IsNullOrEmpty(sub.SubmissionNote) ? "No note" : sub.SubmissionNote)
+                                    </small>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(sub.FilePath))
+                                    {
+                                        <a href="@sub.FilePath" class="btn btn-sm btn-outline-info" target="_blank">
+                                            <i class="bi bi-download me-1"></i>Download
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">No File</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $(document).ready(function() {
+        $('#docsTable').DataTable({
+            pageLength: 25,
+            responsive: true,
+            order: [[2, 'desc']]
+        });
+        $('#submissionsTable').DataTable({
+            pageLength: 25,
+            responsive: true,
+            order: [[2, 'desc']]
+        });
+    });
+</script>
+}

@@ -1,0 +1,69 @@
+@model IT15_MonticalboFinalProj.Models.ViewModels.DashboardStatsViewModel
+@{ Layout = "_SuperAdminLayout"; ViewData["Title"] = "Dashboard"; }
+
+<div class="page-header">
+  <div class="breadcrumb"><a href="#">ResearchHub</a> / Dashboard</div>
+  <h2><i class="bi bi-speedometer2 me-2 text-primary"></i>Super Admin Dashboard</h2>
+  <p>Welcome back, <strong>@User.Identity?.Name</strong> — @Model.SystemName overview</p>
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card" style="--card-color:#4F46E5">
+    <div class="card-icon"><i class="bi bi-person-gear"></i></div>
+    <div class="card-value" data-counter="@Model.TotalAdmins">0</div>
+    <div class="card-label">Administrators</div>
+    <div class="card-trend trend-up"><i class="bi bi-arrow-up-right"></i> Department admins</div>
+  </div>
+  <div class="stat-card" style="--card-color:#06B6D4">
+    <div class="card-icon"><i class="bi bi-person-workspace"></i></div>
+    <div class="card-value" data-counter="@Model.TotalResearchAdvisers">0</div>
+    <div class="card-label">Research Advisers</div>
+    <div class="card-trend trend-up"><i class="bi bi-arrow-up-right"></i> Active advisers</div>
+  </div>
+  <div class="stat-card" style="--card-color:#10B981">
+    <div class="card-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div class="card-value" data-counter="@Model.TotalStudents">0</div>
+    <div class="card-label">Students</div>
+    <div class="card-trend trend-up"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> Enrolled</div>
+  </div>
+  <div class="stat-card" style="--card-color:#F59E0B">
+    <div class="card-icon"><i class="bi bi-journal-check"></i></div>
+    <div class="card-value" data-counter="@Model.TotalAuditLogs">0</div>
+    <div class="card-label">System Logs</div>
+    <div class="card-trend"><i class="bi bi-clock"></i> All time</div>
+  </div>
+</div>
+
+  <div class="col-12">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5><i class="bi bi-journal-text me-2 text-primary"></i>Recent Audit Logs</h5>
+        <a asp-action="AuditLogs" class="btn btn-outline-primary btn-sm">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0" style="color:var(--text)">
+            <thead><tr style="background:var(--bg2)">
+              <th class="px-3 py-3" style="font-size:.75rem;color:var(--text2)">TIME</th>
+              <th class="py-3" style="font-size:.75rem;color:var(--text2)">ACTION</th>
+              <th class="py-3" style="font-size:.75rem;color:var(--text2)">USER</th>
+            </tr></thead>
+            <tbody>
+            @foreach(var log in Model.RecentLogs)
+            {
+              <tr>
+                <td class="px-3 py-2 text-muted" style="font-size:.75rem;white-space:nowrap">@log.Timestamp.ToLocalTime().ToString("MM/dd HH:mm")</td>
+                <td class="py-2" style="font-size:.85rem">@log.Action</td>
+                <td class="py-2" style="font-size:.8rem;color:var(--text2)">@(log.User?.UserName ?? "System")</td>
+              </tr>
+            }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+}

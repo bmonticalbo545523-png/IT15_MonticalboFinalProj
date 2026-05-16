@@ -1,0 +1,132 @@
+@model IT15_MonticalboFinalProj.Models.ViewModels.DashboardStatsViewModel
+@{ Layout = "_ResearchAdviserLayout"; ViewData["Title"] = "Dashboard"; }
+
+<div class="page-header">
+  <div class="breadcrumb">ResearchHub / Adviser</div>
+  <h2><i class="bi bi-speedometer2 me-2 text-primary"></i>Adviser Dashboard</h2>
+  <p>Welcome back, <strong>@User.Identity?.Name</strong></p>
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card" style="--card-color:#4F46E5">
+    <div class="card-icon"><i class="bi bi-people-fill"></i></div>
+    <div class="card-value" data-counter="@Model.TotalProjects">0</div>
+    <div class="card-label">Assigned Groups</div>
+    <div class="card-trend trend-up"><i class="bi bi-journal-richtext"></i> Research teams</div>
+  </div>
+  <div class="stat-card" style="--card-color:#10B981">
+    <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="card-value" data-counter="@Model.ActiveProjects">0</div>
+    <div class="card-label">Active Projects</div>
+    <div class="card-trend trend-up"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> In progress</div>
+  </div>
+  <div class="stat-card" style="--card-color:#F59E0B">
+    <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
+    <div class="card-value" data-counter="@Model.PendingProjects">0</div>
+    <div class="card-label">Pending Review</div>
+    <div class="card-trend trend-down"><i class="bi bi-clock"></i> Awaiting start</div>
+  </div>
+  <div class="stat-card" style="--card-color:#8B5CF6">
+    <div class="card-icon"><i class="bi bi-list-task"></i></div>
+    <div class="card-value" data-counter="@Model.TotalTasks">0</div>
+    <div class="card-label">Total Deliverables</div>
+    <div class="card-trend trend-up"><i class="bi bi-check-all"></i> All tasks</div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-pie-chart-fill me-2 text-primary"></i>Deliverable Status</h5></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="taskChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5><i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity</h5>
+        <a asp-action="MyResearchGroups" class="btn btn-outline-primary btn-sm">Manage Groups</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead><tr style="background:var(--bg2)">
+              <th class="px-3 py-3" style="font-size:.75rem;color:var(--text2)">TIME</th>
+              <th class="py-3" style="font-size:.75rem;color:var(--text2)">ACTION</th>
+            </tr></thead>
+            <tbody>
+            @foreach(var log in Model.RecentLogs)
+            {
+              <tr>
+                <td class="px-3 py-2" style="font-size:.75rem;color:var(--muted);white-space:nowrap">
+                  @log.Timestamp.ToLocalTime().ToString("MM/dd HH:mm")
+                </td>
+                <td class="py-2" style="font-size:.85rem">@log.Action</td>
+              </tr>
+            }
+            @if(!Model.RecentLogs.Any())
+            {
+              <tr><td colspan="2" class="p-4 text-center text-muted">No recent activity.</td></tr>
+            }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Defense Overview -->
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header border-0 bg-transparent py-3">
+        <h5 class="mb-0"><i class="bi bi-shield-shaded me-2 text-primary"></i>Defense Overview</h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-6 border-end">
+                <div class="text-muted small mb-1">Successfully Defended</div>
+                <div class="fs-3 fw-bold text-success">@Model.RecentLogs.Count(l => l.Action.Contains("DEFENDED"))</div>
+                <a asp-action="DefenseSchedules" class="btn btn-link btn-sm text-success text-decoration-none">View All <i class="bi bi-arrow-right small ms-1"></i></a>
+            </div>
+            <div class="col-md-6">
+                <div class="text-muted small mb-1">Requires Re-defense</div>
+                <div class="fs-3 fw-bold text-warning">@Model.RecentLogs.Count(l => l.Action.Contains("RE-DEFENSE REQUIRED"))</div>
+                <a asp-action="DefenseSchedules" class="btn btn-link btn-sm text-warning text-decoration-none">Schedule Now <i class="bi bi-arrow-right small ms-1"></i></a>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h5><i class="bi bi-lightning-fill me-2 text-primary"></i>Quick Actions</h5></div>
+      <div class="card-body d-flex flex-wrap gap-3">
+        <a asp-action="MyResearchGroups" class="btn btn-outline-primary"><i class="bi bi-journal-richtext me-2"></i>My Research Groups</a>
+        <a asp-controller="Documentation" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-folder2-open me-2"></i>Research Repository</a>
+        <a asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-bar-chart me-2"></i>View Statistics</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+new Chart(document.getElementById('taskChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['To Do', 'In Progress', 'Done'],
+    datasets:[{
+      data: [@Model.TasksTodo, @Model.TasksInProgress, @Model.TasksDone],
+      backgroundColor: ['#6366f1','#f59e0b','#10b981'],
+      borderWidth: 0, hoverOffset: 10
+    }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:getComputedStyle(document.documentElement).getPropertyValue('--text') } } } }
+});
+</script>
+}

@@ -1,0 +1,111 @@
+@model IT15_MonticalboFinalProj.Models.ViewModels.DashboardStatsViewModel
+@{ Layout = "_StudentLayout"; ViewData["Title"] = "Dashboard"; }
+
+<div class="page-header">
+  <div class="breadcrumb">ResearchHub / Student</div>
+  <h2><i class="bi bi-speedometer2 me-2 text-primary"></i>My Research Dashboard</h2>
+  <p>Welcome back, <strong>@User.Identity?.Name</strong></p>
+</div>
+
+<div class="stat-cards">
+  <div class="stat-card" style="--card-color:#6366f1">
+    <div class="card-icon"><i class="bi bi-list-check"></i></div>
+    <div class="card-value" data-counter="@Model.TotalTasks">0</div>
+    <div class="card-label">Total Deliverables</div>
+    <div class="card-trend trend-up"><i class="bi bi-clipboard-data"></i> Assigned to you</div>
+  </div>
+  <div class="stat-card" style="--card-color:#f59e0b">
+    <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
+    <div class="card-value" data-counter="@Model.TasksInProgress">0</div>
+    <div class="card-label">In Progress</div>
+    <div class="card-trend trend-up"><i class="bi bi-arrow-repeat"></i> Pending approval</div>
+  </div>
+  <div class="stat-card" style="--card-color:#10b981">
+    <div class="card-icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="card-value" data-counter="@Model.TasksDone">0</div>
+    <div class="card-label">Completed</div>
+    <div class="card-trend trend-up"><i class="bi bi-trophy"></i> Approved</div>
+  </div>
+  <div class="stat-card" style="--card-color:#ec4899">
+    <div class="card-icon"><i class="bi bi-rocket-takeoff"></i></div>
+    <div class="card-value">@Model.TotalProjects</div>
+    <div class="card-label">My Projects</div>
+    <div class="card-trend"><i class="bi bi-person-workspace"></i> Active research</div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-pie-chart-fill me-2 text-primary"></i>Task Completion</h5></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="taskChart"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5><i class="bi bi-megaphone-fill me-2 text-primary"></i>Recent Announcements</h5>
+        <a asp-action="Announcements" class="btn btn-outline-primary btn-sm">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <tbody>
+            @foreach(var log in Model.RecentLogs.Where(l => l.Action.Contains("Adviser") || l.Action.Contains("Admin")))
+            {
+              <tr>
+                <td class="px-3 py-3">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-soft p-2 rounded-circle text-primary"><i class="bi bi-info-circle"></i></div>
+                    <div>
+                        <div class="fw-bold" style="font-size:.85rem">@log.Action</div>
+                        <div class="text-muted" style="font-size:.75rem">@log.Timestamp.ToLocalTime().ToString("MMM dd, HH:mm")</div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
+            @if(!Model.RecentLogs.Any())
+            {
+              <tr><td class="p-4 text-center text-muted">No recent announcements.</td></tr>
+            }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h5><i class="bi bi-lightning-fill me-2 text-primary"></i>Quick Access</h5></div>
+      <div class="card-body d-flex flex-wrap gap-3">
+        <a href="/Tracking/ProjectDetails/0" class="btn btn-outline-primary"><i class="bi bi-rocket-takeoff me-2"></i>My Project Dashboard</a>
+        <a asp-action="MyDeliverables" class="btn btn-outline-primary"><i class="bi bi-list-check me-2"></i>My Deliverables</a>
+        <a asp-controller="Documentation" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-folder2-open me-2"></i>Resource Library</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+new Chart(document.getElementById('taskChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['To Do', 'In Progress', 'Done'],
+    datasets:[{
+      data: [@Model.TasksTodo, @Model.TasksInProgress, @Model.TasksDone],
+      backgroundColor: ['#6366f1','#f59e0b','#10b981'],
+      borderWidth: 0, hoverOffset: 10
+    }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:getComputedStyle(document.documentElement).getPropertyValue('--text') } } } }
+});
+</script>
+<style>
+    .bg-primary-soft { background: rgba(13, 110, 253, 0.1); }
+</style>
+}
